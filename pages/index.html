@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>web-sw-cor24-basic</title>
+    <link rel="stylesheet" href="/ui-95189e0f8d63dd36.css" integrity="sha384-Q+G6FeqmM5eNMnt9pAjrRjeutoVLaCbFywNukYreGwdeoBpxTUunpoalLwM/cKiX"/>
+    
+<script type="module">
+import init, * as bindings from '/web-sw-cor24-basic-2bb74ce0dafa5169.js';
+const wasm = await init({ module_or_path: '/web-sw-cor24-basic-2bb74ce0dafa5169_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+  <link rel="modulepreload" href="/web-sw-cor24-basic-2bb74ce0dafa5169.js" crossorigin="anonymous" integrity="sha384-iL50iUxQ4NeAx0Jgznus2ZR/9bwaFVldh2KY42QQDTEzYUZCzVnjjPPWLEXtHbJG"><link rel="preload" href="/web-sw-cor24-basic-2bb74ce0dafa5169_bg.wasm" crossorigin="anonymous" integrity="sha384-Wp2OrnAS+c95hFUgc67vFhT7/O0E/fxSV51qjTbECps/rxDY3IB1YeuQKgQpnme0" as="fetch" type="application/wasm"></head>
+  <body></body>
+</html>

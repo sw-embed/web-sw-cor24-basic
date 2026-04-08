@@ -1,0 +1,1 @@
+trunk build --release → dist/ copied to pages/. pages/ contains index.html, .css, .js, .wasm, .nojekyll. .github/workflows/pages.yml verified correct (mirrors snobol4).
