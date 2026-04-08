@@ -88,11 +88,20 @@ impl Session {
         mem[..code_size].copy_from_slice(&image.code);
         mem[code_size..code_size + data_size].copy_from_slice(&image.data);
 
+        let has_line_numbers = basic_source.lines().any(|line| {
+            let trimmed = line.trim_start();
+            trimmed.chars().next().map_or(false, |c| c.is_ascii_digit())
+        });
+
         let mut stdin_buf = Vec::new();
         for b in basic_source.bytes() {
             stdin_buf.push(b);
         }
-        stdin_buf.push(b'\n');
+        if has_line_numbers {
+            stdin_buf.extend_from_slice(b"RUN\nBYE\n");
+        } else {
+            stdin_buf.push(b'\n');
+        }
         stdin_buf.push(0x04);
 
         Session {
