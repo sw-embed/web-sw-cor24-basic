@@ -1,0 +1,1 @@
+Updated README.md with project description, live demo link, build instructions, controls reference, architecture summary (two-level interpretation), and links to all sibling repos.
