@@ -13,6 +13,77 @@ BYE
 
 Demonstrates the `PRINT` statement and the `BYE` command to exit the interpreter.
 
+## factorial
+
+Iterative factorial computation using `FOR`/`NEXT` loops.
+
+```basic
+10 REM ITERATIVE FACTORIAL OF N
+20 LET N=7
+30 LET F=1
+40 FOR I=1 TO N
+50 LET F=F*I
+60 NEXT
+70 PRINT N;"!=";F
+80 END
+```
+
+Demonstrates:
+- Numbered lines and `REM` comments
+- `FOR`/`NEXT` loops
+- Variable assignment with `LET`
+- `END` statement to terminate
+
+## fibonacci
+
+Prints the first 10 Fibonacci numbers using iteration.
+
+```basic
+10 REM FIRST 10 FIBONACCI NUMBERS
+20 LET A=0
+30 LET B=1
+40 FOR I=1 TO 10
+50 PRINT A
+60 LET C=A+B
+70 LET A=B
+80 LET B=C
+90 NEXT
+99 END
+```
+
+Demonstrates:
+- `FOR`/`NEXT` loops
+- Sequential variable swaps
+- Numbered line program structure
+
+## fizzbuzz
+
+Classic FizzBuzz for numbers 1 through 15 using `GOTO` and divisibility checks.
+
+```basic
+10 REM FIZZBUZZ 1..15
+20 FOR I=1 TO 15
+30 IF (I/15)*15=I THEN GOTO 100
+40 IF (I/3)*3=I THEN GOTO 200
+50 IF (I/5)*5=I THEN GOTO 300
+60 PRINT I
+70 GOTO 90
+90 NEXT
+99 END
+100 PRINT "FIZZBUZZ"
+110 GOTO 90
+200 PRINT "FIZZ"
+210 GOTO 90
+300 PRINT "BUZZ"
+310 GOTO 90
+```
+
+Demonstrates:
+- `IF`/`THEN` conditional branching
+- `GOTO` for unconditional jumps
+- Integer divisibility testing via `(I/N)*N=I`
+- Multi-way branching pattern
+
 ## calc
 
 Arithmetic expressions with variables and built-in functions.
