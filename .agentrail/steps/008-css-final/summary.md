@@ -1,0 +1,1 @@
+CSS is consistent with snobol4 dark theme — only difference is removed textarea.data rules (BASIC has no data input). All colors, fonts, spacing, hover states, min-height/scroll, button styling, chrome header, and compact status line match.
