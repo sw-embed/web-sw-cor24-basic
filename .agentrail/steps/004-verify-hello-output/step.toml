@@ -1,0 +1,7 @@
+number = 4
+slug = "verify-hello-output"
+status = "pending"
+description = "Verify the 'hello' example produces correct output. Run trunk serve, select '..."
+role = "production"
+context_files = []
+created_at = "2026-04-07T18:37:14"

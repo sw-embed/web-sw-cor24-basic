@@ -1,0 +1,7 @@
+number = 5
+slug = "verify-calc-output"
+status = "pending"
+description = "Verify the 'calc' example produces correct output. Run trunk serve, select 'c..."
+role = "production"
+context_files = []
+created_at = "2026-04-07T18:37:23"

@@ -1,0 +1,1 @@
+Build for production and deploy: (1) Run 'trunk build --release'. (2) Copy everything from dist/ into pages/ (overwrite existing files). (3) Ensure pages/.nojekyll exists. (4) Commit pages/ directory. (5) Verify .github/workflows/pages.yml is correct. (6) The workflow uploads ./pages as the Pages artifact on push to main. This step only commits locally — do NOT push.

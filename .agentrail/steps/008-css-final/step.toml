@@ -1,0 +1,7 @@
+number = 8
+slug = "css-final"
+status = "pending"
+description = "Final CSS pass on src/ui.css: (1) Ensure the dark theme is consistent with we..."
+role = "production"
+context_files = []
+created_at = "2026-04-07T18:38:04"

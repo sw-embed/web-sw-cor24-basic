@@ -1,0 +1,19 @@
+pub struct Demo {
+    pub name: &'static str,
+    pub source: &'static str,
+}
+
+pub static DEMOS: &[Demo] = &[
+    Demo {
+        name: "calc",
+        source: include_str!("../examples/calc.bas"),
+    },
+    Demo {
+        name: "hello",
+        source: include_str!("../examples/hello.bas"),
+    },
+];
+
+pub fn default_demo_index() -> usize {
+    DEMOS.iter().position(|d| d.name == "hello").unwrap_or(0)
+}

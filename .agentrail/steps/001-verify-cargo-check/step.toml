@@ -1,0 +1,8 @@
+number = 1
+slug = "verify-cargo-check"
+status = "completed"
+description = "Verify the project skeleton compiles. Run 'cargo check' and fix any compilati..."
+role = "production"
+context_files = []
+created_at = "2026-04-07T18:36:58"
+completed_at = "2026-04-07T18:39:26"

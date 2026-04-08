@@ -1,0 +1,1 @@
+Verify the project skeleton compiles. Run 'cargo check' and fix any compilation errors. The project uses path deps on cor24-emulator, pa24r, and cor24-isa. Ensure assets/basic.p24 exists (copy from ../sw-cor24-basic/build/ if missing). The goal is a clean cargo check with no errors or warnings.

@@ -1,0 +1,7 @@
+number = 6
+slug = "ui-controls"
+status = "pending"
+description = "Polish the UI controls: (1) Run button toggles to Stop while running and back..."
+role = "production"
+context_files = []
+created_at = "2026-04-07T18:37:36"

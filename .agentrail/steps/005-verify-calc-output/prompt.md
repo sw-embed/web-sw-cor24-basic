@@ -1,0 +1,1 @@
+Verify the 'calc' example produces correct output. Run trunk serve, select 'calc', click Run, and check the output. Expected output lines: COR24 BASIC V1, 2+3=5, 7*6=42, 100/7=14, A=10, B=20, A+B=30, (A+B)*2=60, ABS(-42)=42. Fix any issues with integer division, expression evaluation, or output formatting.

@@ -1,0 +1,1 @@
+cargo check passes cleanly with no errors or warnings. assets/basic.p24 exists (8,648 bytes). All path deps (cor24-emulator, pa24r, cor24-isa) resolve correctly.

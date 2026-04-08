@@ -1,0 +1,1 @@
+Run 'trunk build --release' and verify it produces output in dist/. Fix any Trunk or WASM build errors. The build uses Trunk with index.html as entry point. Ensure the dist/ directory contains index.html, a .js file, a .wasm file, and a .css file.
