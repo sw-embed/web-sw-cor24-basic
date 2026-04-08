@@ -1,0 +1,1 @@
+All UI controls already implemented correctly: Run/Stop toggle, Reset (disabled while running, reloads demo), Clear (clears output only, works after run), dropdown disabled while running. Modeled after web-sw-cor24-snobol4 pattern. No changes needed.
