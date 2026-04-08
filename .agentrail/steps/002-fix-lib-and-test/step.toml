@@ -1,7 +1,8 @@
 number = 2
 slug = "fix-lib-and-test"
-status = "in-progress"
+status = "completed"
 description = "Fix lib.rs compile errors against runner.rs (pv24t-style Rust p-code VM), ver..."
 role = "production"
 context_files = []
 created_at = "2026-04-07T22:50:56"
+completed_at = "2026-04-07T23:09:49"
