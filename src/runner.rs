@@ -39,6 +39,8 @@ pub struct Session {
     vm_state_addr: u32,
     code_seg_addr: u32,
     vm_loop_addr: u32,
+    accumulated_output: String,
+    uart_seen: usize,
 }
 
 pub struct TickResult {
@@ -52,8 +54,6 @@ impl Session {
 
         let binary = config::PVM_BINARY;
         let vm_state_addr = config::label_addr("vm_state");
-        let eval_stack_base = config::label_addr("eval_stack");
-        let call_stack_base = config::label_addr("call_stack");
         let code_seg_addr = config::label_addr("code_seg");
         let vm_loop_addr = config::label_addr("vm_loop");
 
@@ -72,10 +72,14 @@ impl Session {
             vm_state_addr,
             code_seg_addr,
             vm_loop_addr,
+            accumulated_output: String::new(),
+            uart_seen: 0,
         };
 
         session.load_basic_p24();
-        session.init_vm(eval_stack_base, call_stack_base);
+        if !session.done {
+            session.init_vm();
+        }
         session.queue_input(basic_source);
 
         session
@@ -119,15 +123,10 @@ impl Session {
         }
     }
 
-    fn init_vm(&mut self, eval_stack_base: u32, call_stack_base: u32) {
-        if self.done {
-            return;
-        }
-
+    fn init_vm(&mut self) {
         let code_seg = self.code_seg_addr;
         let load_addr = P24_LOAD_ADDR;
 
-        // Write "sys halt" at code_seg so pvm.s init halts after boot
         self.emu.write_byte(code_seg, 0x60);
         self.emu.write_byte(code_seg + 1, 0x00);
 
@@ -153,29 +152,35 @@ impl Session {
         self.emu.write_byte(base + 21, 0);
         self.emu.write_byte(base + 22, 0);
         self.emu.write_byte(base + 23, 0);
-
-        let _ = (eval_stack_base, call_stack_base);
     }
 
     fn queue_input(&mut self, source: &str) {
-        for line in source.lines() {
-            for b in line.bytes() {
-                self.uart_rx_queue.push_back(b);
-            }
-            self.uart_rx_queue.push_back(b'\r');
+        for b in source.bytes() {
+            self.uart_rx_queue.push_back(b);
         }
-        self.uart_rx_queue.push_back(b'\n');
     }
 
     fn feed_uart_bytes(&mut self) {
-        while !self.uart_rx_queue.is_empty() {
+        let mut feed_budget: u32 = 10_000;
+        while !self.uart_rx_queue.is_empty() && feed_budget > 0 {
             let status = self.emu.read_byte(0xFF0101);
             if status & 0x01 != 0 {
-                break;
+                self.emu.run_batch(50);
+                feed_budget = feed_budget.saturating_sub(50);
+                continue;
             }
-            if let Some(byte) = self.uart_rx_queue.pop_front() {
-                self.emu.send_uart_byte(byte);
-            }
+            let byte = self.uart_rx_queue.pop_front().unwrap();
+            self.emu.send_uart_byte(byte);
+            self.emu.run_batch(50);
+            feed_budget = feed_budget.saturating_sub(50);
+        }
+    }
+
+    fn collect_output(&mut self) {
+        let uart = self.emu.get_uart_output();
+        if uart.len() > self.uart_seen {
+            self.accumulated_output.push_str(&uart[self.uart_seen..]);
+            self.uart_seen = uart.len();
         }
     }
 
@@ -189,10 +194,11 @@ impl Session {
         let result = self.emu.run_batch(BATCH_SIZE);
         self.instructions += result.instructions_run as u64;
 
-        self.collect_uart();
+        self.collect_output();
 
         let (_pc, _esp, _csp, _fp, _gp, _hp, _code, status, trap_code) = self.read_pcode_state();
         if status == 1 {
+            self.collect_output();
             self.done = true;
             self.halted = true;
             self.stop_reason = "halted".into();
@@ -203,6 +209,7 @@ impl Session {
 
         match result.reason {
             StopReason::Halted => {
+                self.collect_output();
                 self.done = true;
                 self.halted = true;
                 self.stop_reason = "emulator halted".into();
@@ -242,16 +249,12 @@ impl Session {
         )
     }
 
-    fn collect_uart(&mut self) {
-        let uart = self.emu.get_uart_output();
-        if !uart.is_empty() {
-            self.emu.clear_uart_output();
-        }
-    }
-
     pub fn output(&self) -> String {
-        let raw = self.emu.get_uart_output();
-        let cleaned: String = raw.chars().filter(|&c| c != '>').collect();
+        let cleaned: String = self
+            .accumulated_output
+            .chars()
+            .filter(|&c| c != '>')
+            .collect();
         cleaned
     }
 }

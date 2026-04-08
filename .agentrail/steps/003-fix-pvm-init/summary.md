@@ -1,0 +1,1 @@
+Rewrote runner.rs based on macrolisp UART patterns: (1) accumulated_output + uart_seen offset to preserve output across ticks, (2) feed_uart_bytes interleaves small run_batch(50) calls with byte sends like macrolisp, (3) queue_input feeds raw file bytes (newlines included) matching pv24t -i behavior, (4) collect_output called after feed and after batch to capture all UART output.
