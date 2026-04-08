@@ -1,0 +1,1 @@
+calc example uses same runner pipeline as hello. No code changes needed — both examples go through Session::new() which creates fresh pvm.s + basic.p24 + UART input. trunk build --release passes. Manual browser verification needed.
