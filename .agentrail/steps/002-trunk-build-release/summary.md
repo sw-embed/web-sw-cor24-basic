@@ -1,0 +1,1 @@
+trunk build --release succeeds. dist/ contains index.html, .css (3.3 KB), .js (27 KB), .wasm (180 KB).
