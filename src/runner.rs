@@ -5,7 +5,11 @@ const MASK24: i32 = 0x00FF_FFFF;
 
 fn sign_extend_24(v: i32) -> i32 {
     let v = v & MASK24;
-    if v & 0x0080_0000 != 0 { v | !MASK24 } else { v }
+    if v & 0x0080_0000 != 0 {
+        v | !MASK24
+    } else {
+        v
+    }
 }
 
 fn wrap24(v: i32) -> i32 {
