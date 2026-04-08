@@ -1,0 +1,1 @@
+Runner rewritten with proper UART patterns from macrolisp. trunk build --release succeeds. Session::new does full pvm.s init + basic.p24 load + UART input queuing. Output accumulated with uart_seen offset. '>' prompts stripped. Manual browser verification needed for step 004/005.
