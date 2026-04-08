@@ -1,0 +1,1 @@
+All status and shortcut features already present from snobol4 pattern: instruction count + elapsed time in running/done status, budget-exhausted with Increase 4x button, Ctrl/Cmd+Enter for Run, Esc for Stop, red error status. No changes needed.
