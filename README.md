@@ -6,6 +6,8 @@ in your browser. Zero install.
 
 **Live demo**: https://sw-embed.github.io/web-sw-cor24-basic/
 
+![web-sw-cor24-basic screenshot](images/screenshot.png)
+
 ## How it works
 
 The BASIC interpreter (Pascal compiled to p-code `.p24`) runs on the COR24
