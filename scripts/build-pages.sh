@@ -4,7 +4,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
+BUILD_HOST="$(hostname -s 2>/dev/null || echo unknown)"
+BUILD_TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+BUILD_SHA="$(git -C "$PROJECT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+
 echo "=== Building pages/ ==="
+echo "  host:  $BUILD_HOST"
+echo "  time:  $BUILD_TS"
+echo "  sha:   $BUILD_SHA"
 cd "$PROJECT_DIR"
 
 # Take the same exclusive dist/ lock that scripts/serve.sh uses so this

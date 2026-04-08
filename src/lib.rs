@@ -298,6 +298,23 @@ impl Component for App {
                     <pre class="out">{ &self.output }</pre>
                 </section>
             </main>
+            <footer>
+                <span>{"MIT License"}</span>
+                <span class="footer-sep">{"\u{00b7}"}</span>
+                <span>{"\u{00a9} 2026 Michael A Wright"}</span>
+                <span class="footer-sep">{"\u{00b7}"}</span>
+                <a href="https://makerlisp.com" target="_blank">{"COR24-TB"}</a>
+                <span class="footer-sep">{"\u{00b7}"}</span>
+                <a href="https://software-wrighter-lab.github.io/" target="_blank">{"Blog"}</a>
+                <span class="footer-sep">{"\u{00b7}"}</span>
+                <a href="https://discord.com/invite/Ctzk5uHggZ" target="_blank">{"Discord"}</a>
+                <span class="footer-sep">{"\u{00b7}"}</span>
+                <a href="https://www.youtube.com/@SoftwareWrighter" target="_blank">{"YouTube"}</a>
+                <span class="footer-sep">{"\u{00b7}"}</span>
+                <a href="https://github.com/sw-embed/web-sw-cor24-basic/blob/main/docs/demos.md" target="_blank">{"Demo Documentation"}</a>
+                <span class="footer-sep">{"\u{00b7}"}</span>
+                <a href="https://github.com/sw-embed/web-sw-cor24-basic/blob/main/CHANGES.md" target="_blank">{"Changes"}</a>
+            </footer>
             </>
         }
     }
