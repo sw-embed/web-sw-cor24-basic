@@ -4,11 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>web-sw-cor24-basic</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="stylesheet" href="/web-sw-cor24-basic/ui-c7c70fcdf8dbc31.css" integrity="sha384-32lxaVbx8MrNOEc4DlKDjYZoR7lkMl3jh2V7RP3GioS4Pr6u50wx4r33XAxrlVxf"/>
     
 <script type="module">
-import init, * as bindings from '/web-sw-cor24-basic/web-sw-cor24-basic-f6b789b51549ce1.js';
-const wasm = await init({ module_or_path: '/web-sw-cor24-basic/web-sw-cor24-basic-f6b789b51549ce1_bg.wasm' });
+import init, * as bindings from '/web-sw-cor24-basic/web-sw-cor24-basic-debeb2d8778681e1.js';
+const wasm = await init({ module_or_path: '/web-sw-cor24-basic/web-sw-cor24-basic-debeb2d8778681e1_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -17,6 +18,6 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-  <link rel="modulepreload" href="/web-sw-cor24-basic/web-sw-cor24-basic-f6b789b51549ce1.js" crossorigin="anonymous" integrity="sha384-1IriWoX34qkPsLNkK+P8Tb9keJWhn8YEzoRluScZqHQn3cIUGzM+lqZkVXQvgrau"><link rel="preload" href="/web-sw-cor24-basic/web-sw-cor24-basic-f6b789b51549ce1_bg.wasm" crossorigin="anonymous" integrity="sha384-9ppabqHS5nd8iVxrfU7nqtqOtVCU5aSy2MLRPiCxsnP90oYTpcgdWBDxdWClRXD9" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/web-sw-cor24-basic/web-sw-cor24-basic-debeb2d8778681e1.js" crossorigin="anonymous" integrity="sha384-1IriWoX34qkPsLNkK+P8Tb9keJWhn8YEzoRluScZqHQn3cIUGzM+lqZkVXQvgrau"><link rel="preload" href="/web-sw-cor24-basic/web-sw-cor24-basic-debeb2d8778681e1_bg.wasm" crossorigin="anonymous" integrity="sha384-fF8gUZpVGx8I4L1RbGqaaI1DpEVmadj9b4u37sh+eej0c4AkyEF6829JthzYNGUC" as="fetch" type="application/wasm"></head>
   <body></body>
 </html>
