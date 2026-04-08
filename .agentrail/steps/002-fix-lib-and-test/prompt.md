@@ -1,0 +1,1 @@
+Fix lib.rs compile errors against runner.rs (pv24t-style Rust p-code VM), verify cargo check, test hello.bas in browser with playwright, fix runtime issues until output appears.

@@ -6,7 +6,7 @@ pub mod config;
 pub mod demos;
 pub mod runner;
 
-use demos::{default_demo_index, DEMOS};
+use demos::{DEMOS, default_demo_index};
 use runner::Session;
 
 const DEFAULT_MAX_INSTRS: u64 = 200_000_000;
@@ -160,28 +160,25 @@ impl Component for App {
                     self.running = false;
                     return true;
                 };
-                let remaining = self.max_instrs.saturating_sub(session.instructions);
+                let remaining = self.max_instrs.saturating_sub(session.instructions());
                 if remaining == 0 {
                     self.budget_exhausted = true;
-                    let instrs = session.instructions;
+                    let instrs = session.instructions();
                     self.finish(format!("halted (budget) -- {} instrs", instrs), true);
                     return true;
                 }
                 let result = session.tick();
                 if result.done {
-                    let halted = session.halted;
-                    let instrs = session.instructions;
-                    let reason = session.stop_reason.clone();
+                    let instrs = session.instructions();
+                    let reason = session.stop_reason();
+                    let halted = session.is_halted();
                     self.finish(
-                        if halted {
-                            format!(
-                                "done ({} instrs, {:.0} ms)",
-                                instrs,
-                                now_ms() - self.started_at
-                            )
-                        } else {
-                            format!("{} ({} instrs)", reason, instrs)
-                        },
+                        format!(
+                            "{} ({} instrs, {:.0} ms)",
+                            reason,
+                            instrs,
+                            now_ms() - self.started_at
+                        ),
                         !halted,
                     );
                 } else {
@@ -189,7 +186,8 @@ impl Component for App {
                     self.elapsed_ms = now_ms() - self.started_at;
                     self.status = format!(
                         "running... {} instrs, {:.0} ms",
-                        session.instructions, self.elapsed_ms
+                        session.instructions(),
+                        self.elapsed_ms
                     );
                     self.schedule_tick(ctx);
                 }

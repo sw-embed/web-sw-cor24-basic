@@ -1,260 +1,738 @@
-use std::collections::VecDeque;
+//! Browser p-code VM — ported from pv24t (sw-cor24-pcode/tracer/src/main.rs).
+//! Runs .p24 binaries directly in WASM without the COR24 emulator layer.
 
-use cor24_emulator::{EmulatorCore, StopReason};
+const MASK24: i32 = 0x00FF_FFFF;
 
-use crate::config;
-
-const BATCH_SIZE: u64 = 200_000;
-const P24_LOAD_ADDR: u32 = 0x010000;
-
-mod vm_offsets {
-    pub const PC: u32 = 0;
-    pub const ESP: u32 = 3;
-    pub const CSP: u32 = 6;
-    pub const FP_VM: u32 = 9;
-    pub const GP: u32 = 12;
-    pub const HP: u32 = 15;
-    pub const CODE: u32 = 18;
-    pub const STATUS: u32 = 21;
-    pub const TRAP_CODE: u32 = 24;
+fn sign_extend_24(v: i32) -> i32 {
+    let v = v & MASK24;
+    if v & 0x0080_0000 != 0 { v | !MASK24 } else { v }
 }
 
-fn pcode_instr_size(op: u8) -> u32 {
-    match op {
-        0x01 | 0x30 | 0x31 | 0x32 | 0x33 | 0x54 | 0x55 | 0x56 => 4,
-        0x02 | 0x36 | 0x40 | 0x42 | 0x43 | 0x44 | 0x45 | 0x57 | 0x60 | 0x34 | 0x35 => 2,
-        0x58 | 0x59 => 3,
-        0x5A => 5,
-        _ => 1,
-    }
+fn wrap24(v: i32) -> i32 {
+    sign_extend_24(v)
 }
+
+const WORD: usize = 3;
 
 pub struct Session {
-    emu: EmulatorCore,
-    pub instructions: u64,
-    pub done: bool,
-    pub stop_reason: String,
-    pub halted: bool,
-    uart_rx_queue: VecDeque<u8>,
-    vm_state_addr: u32,
-    code_seg_addr: u32,
-    vm_loop_addr: u32,
-    accumulated_output: String,
-    uart_seen: usize,
+    mem: Vec<u8>,
+    pc: usize,
+    esp: usize,
+    csp: usize,
+    fp_vm: usize,
+    gp: usize,
+    hp: usize,
+    code_size: usize,
+    eval_stack_base: usize,
+    heap_base: usize,
+    status: u8,
+    trap_code: u8,
+    instruction_count: u64,
+    stdin_buf: Vec<u8>,
+    stdin_pos: usize,
+    stdout_buf: String,
+}
+
+const BATCH_SIZE: u64 = 200_000;
+
+impl Session {
+    fn dummy() -> Self {
+        Session {
+            mem: vec![0u8; 1],
+            pc: 0,
+            esp: 0,
+            csp: 0,
+            fp_vm: 0,
+            gp: 0,
+            hp: 0,
+            code_size: 0,
+            eval_stack_base: 0,
+            heap_base: 0,
+            status: 1,
+            trap_code: 0,
+            instruction_count: 0,
+            stdin_buf: Vec::new(),
+            stdin_pos: 0,
+            stdout_buf: String::new(),
+        }
+    }
+
+    pub fn new(basic_source: &str) -> Self {
+        let p24_bytes = crate::config::BASIC_P24;
+        let image = match pa24r::load_p24(p24_bytes) {
+            Ok(img) => img,
+            Err(e) => {
+                web_sys::console::error_1(&format!("p24 load error: {:?}", e).into());
+                return Self::dummy();
+            }
+        };
+
+        let code_size = image.code.len();
+        let data_size = image.data.len();
+        let global_count = image.global_count as usize;
+        let globals_base = code_size + data_size;
+        let globals_size = global_count * WORD;
+        let call_stack_base = globals_base + globals_size;
+        let call_stack_size = 256 * WORD;
+        let eval_stack_base = call_stack_base + call_stack_size;
+        let eval_stack_size = 256 * WORD;
+        let heap_base = eval_stack_base + eval_stack_size;
+        let heap_size = 4096 * WORD;
+        let total = heap_base + heap_size;
+
+        let mut mem = vec![0u8; total];
+        mem[..code_size].copy_from_slice(&image.code);
+        mem[code_size..code_size + data_size].copy_from_slice(&image.data);
+
+        let mut stdin_buf = Vec::new();
+        for b in basic_source.bytes() {
+            stdin_buf.push(b);
+        }
+        stdin_buf.push(b'\n');
+        stdin_buf.push(0x04);
+
+        Session {
+            mem,
+            pc: image.entry_point as usize,
+            esp: eval_stack_base,
+            csp: call_stack_base,
+            fp_vm: call_stack_base,
+            gp: globals_base,
+            hp: heap_base,
+            code_size,
+            eval_stack_base,
+            heap_base,
+            status: 0,
+            trap_code: 0,
+            instruction_count: 0,
+            stdin_buf,
+            stdin_pos: 0,
+            stdout_buf: String::new(),
+        }
+    }
+
+    pub fn tick(&mut self) -> TickResult {
+        if self.status != 0 {
+            return TickResult { done: true };
+        }
+
+        let budget = BATCH_SIZE.min(if self.instruction_count > 0 {
+            20_000_000_u64.saturating_sub(self.instruction_count)
+        } else {
+            BATCH_SIZE
+        });
+
+        let mut ran = 0u64;
+        while self.status == 0 && ran < budget {
+            let op_byte = self.fetch_u8();
+            self.execute(op_byte);
+            self.instruction_count += 1;
+            ran += 1;
+        }
+
+        TickResult {
+            done: self.status != 0,
+        }
+    }
+
+    pub fn is_done(&self) -> bool {
+        self.status != 0
+    }
+
+    pub fn is_halted(&self) -> bool {
+        self.status == 1
+    }
+
+    pub fn stop_reason(&self) -> String {
+        if self.status == 1 {
+            "halted".into()
+        } else {
+            format!("trap {}", self.trap_code)
+        }
+    }
+
+    pub fn instructions(&self) -> u64 {
+        self.instruction_count
+    }
+
+    pub fn output(&self) -> String {
+        self.stdout_buf.chars().filter(|&c| c != '>').collect()
+    }
+
+    // --- memory access ---
+
+    fn read_word(&self, addr: usize) -> i32 {
+        if addr + 2 >= self.mem.len() {
+            return 0;
+        }
+        let lo = self.mem[addr] as i32;
+        let mid = self.mem[addr + 1] as i32;
+        let hi = self.mem[addr + 2] as i32;
+        sign_extend_24(lo | (mid << 8) | (hi << 16))
+    }
+
+    fn write_word(&mut self, addr: usize, val: i32) {
+        let v = val & MASK24;
+        if addr + 2 >= self.mem.len() {
+            self.trap(2);
+            return;
+        }
+        self.mem[addr] = v as u8;
+        self.mem[addr + 1] = (v >> 8) as u8;
+        self.mem[addr + 2] = (v >> 16) as u8;
+    }
+
+    fn read_byte(&self, addr: usize) -> i32 {
+        if addr >= self.mem.len() {
+            0
+        } else {
+            self.mem[addr] as i32
+        }
+    }
+
+    fn write_byte(&mut self, addr: usize, val: i32) {
+        if addr >= self.mem.len() {
+            self.trap(2);
+            return;
+        }
+        self.mem[addr] = val as u8;
+    }
+
+    // --- fetch ---
+
+    fn fetch_u8(&mut self) -> u8 {
+        let v = if self.pc < self.code_size {
+            self.mem[self.pc]
+        } else {
+            0
+        };
+        self.pc += 1;
+        v
+    }
+
+    fn fetch_i8(&mut self) -> i32 {
+        self.fetch_u8() as i8 as i32
+    }
+
+    fn fetch_u24(&mut self) -> u32 {
+        let lo = self.fetch_u8() as u32;
+        let mid = self.fetch_u8() as u32;
+        let hi = self.fetch_u8() as u32;
+        lo | (mid << 8) | (hi << 16)
+    }
+
+    // --- eval stack ---
+
+    fn push_eval(&mut self, val: i32) {
+        if self.esp >= self.heap_base {
+            self.trap(2);
+            return;
+        }
+        self.write_word(self.esp, val);
+        self.esp += WORD;
+    }
+
+    fn pop_eval(&mut self) -> i32 {
+        if self.esp <= self.eval_stack_base {
+            self.trap(3);
+            return 0;
+        }
+        self.esp -= WORD;
+        self.read_word(self.esp)
+    }
+
+    fn peek_eval(&self) -> i32 {
+        if self.esp <= self.eval_stack_base {
+            0
+        } else {
+            self.read_word(self.esp - WORD)
+        }
+    }
+
+    fn trap(&mut self, code: u8) {
+        self.status = 2;
+        self.trap_code = code;
+    }
+
+    fn follow_static_links(&self, depth: usize) -> usize {
+        let mut frame = self.fp_vm;
+        for _ in 0..depth {
+            frame = self.read_word(frame + 2 * WORD) as usize;
+        }
+        frame
+    }
+
+    // --- execute ---
+
+    fn execute(&mut self, op: u8) {
+        match op {
+            0x00 => {
+                self.status = 1;
+            }
+            0x01 => {
+                let v = self.fetch_u24() as i32;
+                self.push_eval(sign_extend_24(v));
+            }
+            0x02 => {
+                let v = self.fetch_i8();
+                self.push_eval(wrap24(v));
+            }
+            0x03 => {
+                let v = self.peek_eval();
+                self.push_eval(v);
+            }
+            0x04 => {
+                self.pop_eval();
+            }
+            0x05 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(b);
+                self.push_eval(a);
+            }
+            0x06 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(a);
+                self.push_eval(b);
+                self.push_eval(a);
+            }
+            0x10 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(wrap24(a.wrapping_add(b)));
+            }
+            0x11 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(wrap24(a.wrapping_sub(b)));
+            }
+            0x12 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(wrap24(a.wrapping_mul(b)));
+            }
+            0x13 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                if b == 0 {
+                    self.trap(1);
+                    return;
+                }
+                self.push_eval(wrap24(a / b));
+            }
+            0x14 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                if b == 0 {
+                    self.trap(1);
+                    return;
+                }
+                self.push_eval(wrap24(a % b));
+            }
+            0x15 => {
+                let a = self.pop_eval();
+                self.push_eval(wrap24(-a));
+            }
+            0x16 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(wrap24(a & b));
+            }
+            0x17 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(wrap24(a | b));
+            }
+            0x18 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(wrap24(a ^ b));
+            }
+            0x19 => {
+                let a = self.pop_eval();
+                self.push_eval(wrap24(!a));
+            }
+            0x1A => {
+                let n = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(wrap24(a << (n & 0x1F)));
+            }
+            0x1B => {
+                let n = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(wrap24(a >> (n & 0x1F)));
+            }
+            0x20 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(if a == b { 1 } else { 0 });
+            }
+            0x21 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(if a != b { 1 } else { 0 });
+            }
+            0x22 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(if a < b { 1 } else { 0 });
+            }
+            0x23 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(if a <= b { 1 } else { 0 });
+            }
+            0x24 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(if a > b { 1 } else { 0 });
+            }
+            0x25 => {
+                let b = self.pop_eval();
+                let a = self.pop_eval();
+                self.push_eval(if a >= b { 1 } else { 0 });
+            }
+            0x30 => {
+                let addr = self.fetch_u24() as usize;
+                self.pc = addr;
+            }
+            0x31 => {
+                let addr = self.fetch_u24() as usize;
+                let flag = self.pop_eval();
+                if flag == 0 {
+                    self.pc = addr;
+                }
+            }
+            0x32 => {
+                let addr = self.fetch_u24() as usize;
+                let flag = self.pop_eval();
+                if flag != 0 {
+                    self.pc = addr;
+                }
+            }
+            0x33 => {
+                let addr = self.fetch_u24() as usize;
+                self.write_word(self.csp, self.pc as i32);
+                self.write_word(self.csp + WORD, self.fp_vm as i32);
+                self.write_word(self.csp + 2 * WORD, self.fp_vm as i32);
+                self.write_word(self.csp + 3 * WORD, self.esp as i32);
+                self.csp += 4 * WORD;
+                self.pc = addr;
+            }
+            0x34 => {
+                let nargs = self.fetch_u8() as usize;
+                let return_pc = self.read_word(self.fp_vm) as usize;
+                let dynamic_link = self.read_word(self.fp_vm + WORD) as usize;
+                let saved_esp = self.read_word(self.fp_vm + 3 * WORD) as usize;
+                let has_return = self.esp > saved_esp;
+                let return_val = if has_return {
+                    Some(self.pop_eval())
+                } else {
+                    None
+                };
+                self.csp = self.fp_vm;
+                self.fp_vm = dynamic_link;
+                self.esp = saved_esp - nargs * WORD;
+                if let Some(rv) = return_val {
+                    self.push_eval(rv);
+                }
+                self.pc = return_pc;
+            }
+            0x35 => {
+                let depth = self.fetch_u8();
+                let addr = self.fetch_u24() as usize;
+                let mut sl = self.fp_vm;
+                for _ in 0..depth {
+                    sl = self.read_word(sl + 2 * WORD) as usize;
+                }
+                self.write_word(self.csp, self.pc as i32);
+                self.write_word(self.csp + WORD, self.fp_vm as i32);
+                self.write_word(self.csp + 2 * WORD, sl as i32);
+                self.write_word(self.csp + 3 * WORD, self.esp as i32);
+                self.csp += 4 * WORD;
+                self.pc = addr;
+            }
+            0x36 => {
+                let code = self.fetch_u8();
+                self.trap(code);
+            }
+            0x40 => {
+                let nlocals = self.fetch_u8() as usize;
+                self.fp_vm = self.csp - 4 * WORD;
+                for _ in 0..nlocals {
+                    self.write_word(self.csp, 0);
+                    self.csp += WORD;
+                }
+            }
+            0x41 => {
+                self.csp = self.fp_vm + 4 * WORD;
+            }
+            0x42 => {
+                let off = self.fetch_u8() as usize;
+                let addr = self.fp_vm + 4 * WORD + off * WORD;
+                self.push_eval(self.read_word(addr));
+            }
+            0x43 => {
+                let off = self.fetch_u8() as usize;
+                let val = self.pop_eval();
+                let addr = self.fp_vm + 4 * WORD + off * WORD;
+                self.write_word(addr, val);
+            }
+            0x44 => {
+                let off = self.fetch_u24() as usize;
+                let addr = self.gp + off * WORD;
+                self.push_eval(self.read_word(addr));
+            }
+            0x45 => {
+                let off = self.fetch_u24() as usize;
+                let val = self.pop_eval();
+                let addr = self.gp + off * WORD;
+                self.write_word(addr, val);
+            }
+            0x46 => {
+                let off = self.fetch_u8() as usize;
+                let addr = self.fp_vm + 4 * WORD + off * WORD;
+                self.push_eval(addr as i32);
+            }
+            0x47 => {
+                let off = self.fetch_u24() as usize;
+                let addr = self.gp + off * WORD;
+                self.push_eval(addr as i32);
+            }
+            0x48 => {
+                let idx = self.fetch_u8() as usize;
+                let saved_esp = self.read_word(self.fp_vm + 3 * WORD) as usize;
+                let addr = saved_esp - (idx + 1) * WORD;
+                self.push_eval(self.read_word(addr));
+            }
+            0x49 => {
+                let idx = self.fetch_u8() as usize;
+                let val = self.pop_eval();
+                let saved_esp = self.read_word(self.fp_vm + 3 * WORD) as usize;
+                let addr = saved_esp - (idx + 1) * WORD;
+                self.write_word(addr, val);
+            }
+            0x4A => {
+                let depth = self.fetch_u8() as usize;
+                let off = self.fetch_u8() as usize;
+                let frame = self.follow_static_links(depth);
+                let addr = frame + 4 * WORD + off * WORD;
+                self.push_eval(self.read_word(addr));
+            }
+            0x4B => {
+                let depth = self.fetch_u8() as usize;
+                let off = self.fetch_u8() as usize;
+                let val = self.pop_eval();
+                let frame = self.follow_static_links(depth);
+                let addr = frame + 4 * WORD + off * WORD;
+                self.write_word(addr, val);
+            }
+            0x50 => {
+                let addr = self.pop_eval();
+                if addr == 0 {
+                    self.trap(6);
+                    return;
+                }
+                self.push_eval(self.read_word(addr as usize));
+            }
+            0x51 => {
+                let addr = self.pop_eval();
+                let val = self.pop_eval();
+                if addr == 0 {
+                    self.trap(6);
+                    return;
+                }
+                self.write_word(addr as usize, val);
+            }
+            0x52 => {
+                let addr = self.pop_eval();
+                if addr == 0 {
+                    self.trap(6);
+                    return;
+                }
+                self.push_eval(self.read_byte(addr as usize));
+            }
+            0x53 => {
+                let addr = self.pop_eval();
+                let val = self.pop_eval();
+                if addr == 0 {
+                    self.trap(6);
+                    return;
+                }
+                self.write_byte(addr as usize, val);
+            }
+            0x60 => {
+                let id = self.fetch_u8();
+                self.sys_call(id);
+            }
+            0x70 => {
+                let len = self.pop_eval() as usize;
+                let dst = self.pop_eval() as usize;
+                let src = self.pop_eval() as usize;
+                if len > 0 {
+                    if src < dst {
+                        for i in (0..len).rev() {
+                            let b = self.read_byte(src + i);
+                            self.write_byte(dst + i, b);
+                        }
+                    } else {
+                        for i in 0..len {
+                            let b = self.read_byte(src + i);
+                            self.write_byte(dst + i, b);
+                        }
+                    }
+                }
+            }
+            0x71 => {
+                let len = self.pop_eval() as usize;
+                let val = self.pop_eval();
+                let dst = self.pop_eval() as usize;
+                if len > 0 {
+                    for i in 0..len {
+                        self.write_byte(dst + i, val);
+                    }
+                }
+            }
+            0x72 => {
+                let len = self.pop_eval() as usize;
+                let b = self.pop_eval() as usize;
+                let a = self.pop_eval() as usize;
+                let mut result: i32 = 0;
+                for i in 0..len {
+                    let ba = self.read_byte(a + i) & 0xFF;
+                    let bb = self.read_byte(b + i) & 0xFF;
+                    if ba != bb {
+                        result = if ba < bb { -1 } else { 1 };
+                        break;
+                    }
+                }
+                self.push_eval(result);
+            }
+            0x73 => {
+                let addr = self.pop_eval() as usize;
+                self.pc = addr;
+            }
+            0x74 => {
+                let _ = self.fetch_u8();
+                let _ = self.fetch_u8();
+                self.trap(4);
+            }
+            0x75 | 0x76 => {
+                let _ = self.fetch_u8();
+                let _ = self.fetch_u8();
+                self.trap(4);
+            }
+            _ => {
+                self.trap(4);
+            }
+        }
+    }
+
+    fn sys_call(&mut self, id: u8) {
+        match id {
+            0 => {
+                self.status = 1;
+            }
+            1 => {
+                let ch = self.pop_eval() as u8;
+                self.stdout_buf.push(ch as char);
+            }
+            2 => {
+                let ch = if self.stdin_pos < self.stdin_buf.len() {
+                    let c = self.stdin_buf[self.stdin_pos];
+                    self.stdin_pos += 1;
+                    c as i32
+                } else {
+                    -1
+                };
+                self.push_eval(ch);
+            }
+            3 => {
+                self.pop_eval();
+            }
+            4 => {
+                let size = self.pop_eval() as usize;
+                let ptr = self.hp;
+                self.hp += size;
+                if self.hp > self.mem.len() {
+                    self.mem.resize(self.hp, 0);
+                }
+                self.push_eval(ptr as i32);
+            }
+            5 => {
+                self.pop_eval();
+            }
+            6 => {
+                self.push_eval(0);
+            }
+            7 => {
+                self.pop_eval();
+            }
+            8 => {}
+            _ => {
+                self.trap(4);
+            }
+        }
+    }
 }
 
 pub struct TickResult {
     pub done: bool,
 }
 
-impl Session {
-    pub fn new(basic_source: &str) -> Self {
-        let mut emu = EmulatorCore::new();
-        emu.set_uart_tx_busy_cycles(0);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        let binary = config::PVM_BINARY;
-        let vm_state_addr = config::label_addr("vm_state");
-        let code_seg_addr = config::label_addr("code_seg");
-        let vm_loop_addr = config::label_addr("vm_loop");
-
-        emu.hard_reset();
-        emu.load_program(0, binary);
-        emu.load_program_extent(binary.len() as u32);
-        emu.set_pc(0);
-
-        let mut session = Self {
-            emu,
-            instructions: 0,
-            done: false,
-            stop_reason: String::new(),
-            halted: false,
-            uart_rx_queue: VecDeque::new(),
-            vm_state_addr,
-            code_seg_addr,
-            vm_loop_addr,
-            accumulated_output: String::new(),
-            uart_seen: 0,
-        };
-
-        session.load_basic_p24();
-        if !session.done {
-            session.init_vm();
-        }
-        session.queue_input(basic_source);
-
-        session
-    }
-
-    fn load_basic_p24(&mut self) {
-        let basic_p24 = config::BASIC_P24;
-        match pa24r::load_p24(basic_p24) {
-            Ok(image) => {
-                let load_addr = P24_LOAD_ADDR;
-                let code_size = image.code.len() as u32;
-                let total = code_size + image.data.len() as u32;
-
-                for (i, &b) in image.code.iter().chain(image.data.iter()).enumerate() {
-                    self.emu.write_byte(load_addr + i as u32, b);
-                }
-
-                let mut i: u32 = 0;
-                while i < code_size {
-                    let op = self.emu.read_byte(load_addr + i);
-                    let size = pcode_instr_size(op);
-                    if op == 0x01 && i + 4 <= code_size {
-                        let lo = self.emu.read_byte(load_addr + i + 1) as u32;
-                        let mid = self.emu.read_byte(load_addr + i + 2) as u32;
-                        let hi = self.emu.read_byte(load_addr + i + 3) as u32;
-                        let val = lo | (mid << 8) | (hi << 16);
-                        if val >= code_size && val < total {
-                            let abs = val + load_addr;
-                            self.emu.write_byte(load_addr + i + 1, abs as u8);
-                            self.emu.write_byte(load_addr + i + 2, (abs >> 8) as u8);
-                            self.emu.write_byte(load_addr + i + 3, (abs >> 16) as u8);
-                        }
-                    }
-                    i += size;
-                }
-            }
-            Err(e) => {
-                self.stop_reason = format!("p24 load error: {e}");
-                self.done = true;
+    fn run_to_done(src: &str) -> Session {
+        let mut s = Session::new(src);
+        for _ in 0..1000 {
+            let r = s.tick();
+            if r.done {
+                break;
             }
         }
+        s
     }
 
-    fn init_vm(&mut self) {
-        let code_seg = self.code_seg_addr;
-        let load_addr = P24_LOAD_ADDR;
-
-        self.emu.write_byte(code_seg, 0x60);
-        self.emu.write_byte(code_seg + 1, 0x00);
-
-        self.emu.resume();
-        self.emu.run_batch(10_000);
-
-        self.emu.clear_uart_output();
-
-        self.emu.reset();
-        self.emu.set_uart_tx_busy_cycles(0);
-        self.emu.set_stack_bounds(0, 0);
-
-        self.emu.set_pc(self.vm_loop_addr);
-        self.emu.set_reg(3, self.vm_state_addr);
-
-        let base = self.vm_state_addr;
-        self.emu.write_byte(base + 18, load_addr as u8);
-        self.emu.write_byte(base + 19, (load_addr >> 8) as u8);
-        self.emu.write_byte(base + 20, (load_addr >> 16) as u8);
-        self.emu.write_byte(base, 0);
-        self.emu.write_byte(base + 1, 0);
-        self.emu.write_byte(base + 2, 0);
-        self.emu.write_byte(base + 21, 0);
-        self.emu.write_byte(base + 22, 0);
-        self.emu.write_byte(base + 23, 0);
-    }
-
-    fn queue_input(&mut self, source: &str) {
-        for b in source.bytes() {
-            self.uart_rx_queue.push_back(b);
-        }
-    }
-
-    fn feed_uart_bytes(&mut self) {
-        let mut feed_budget: u32 = 10_000;
-        while !self.uart_rx_queue.is_empty() && feed_budget > 0 {
-            let status = self.emu.read_byte(0xFF0101);
-            if status & 0x01 != 0 {
-                self.emu.run_batch(50);
-                feed_budget = feed_budget.saturating_sub(50);
-                continue;
+    #[test]
+    fn calc_runs() {
+        let src = include_str!("../examples/calc.bas");
+        let mut s = Session::new(src);
+        for _ in 0..100000 {
+            let r = s.tick();
+            if r.done {
+                break;
             }
-            let byte = self.uart_rx_queue.pop_front().unwrap();
-            self.emu.send_uart_byte(byte);
-            self.emu.run_batch(50);
-            feed_budget = feed_budget.saturating_sub(50);
         }
+        eprintln!(
+            "status={} trap={} instrs={}",
+            s.status, s.trap_code, s.instruction_count
+        );
+        eprintln!("output={:?}", s.stdout_buf);
+        assert!(
+            s.is_done() && s.is_halted(),
+            "calc failed: {}",
+            s.stop_reason()
+        );
     }
 
-    fn collect_output(&mut self) {
-        let uart = self.emu.get_uart_output();
-        if uart.len() > self.uart_seen {
-            self.accumulated_output.push_str(&uart[self.uart_seen..]);
-            self.uart_seen = uart.len();
-        }
-    }
-
-    pub fn tick(&mut self) -> TickResult {
-        if self.done {
-            return TickResult { done: true };
-        }
-
-        self.feed_uart_bytes();
-
-        let result = self.emu.run_batch(BATCH_SIZE);
-        self.instructions += result.instructions_run as u64;
-
-        self.collect_output();
-
-        let (_pc, _esp, _csp, _fp, _gp, _hp, _code, status, trap_code) = self.read_pcode_state();
-        if status == 1 {
-            self.collect_output();
-            self.done = true;
-            self.halted = true;
-            self.stop_reason = "halted".into();
-        } else if status == 2 {
-            self.done = true;
-            self.stop_reason = format!("trap {}", trap_code);
-        }
-
-        match result.reason {
-            StopReason::Halted => {
-                self.collect_output();
-                self.done = true;
-                self.halted = true;
-                self.stop_reason = "emulator halted".into();
-            }
-            StopReason::InvalidInstruction(byte) => {
-                self.done = true;
-                self.stop_reason = format!(
-                    "invalid instruction 0x{:02X} at PC=0x{:06X}",
-                    byte,
-                    self.emu.pc()
-                );
-            }
-            StopReason::CycleLimit => {
-                if result.instructions_run == 0 && !self.done {
-                    self.done = true;
-                    self.stop_reason = "stalled".into();
-                }
-            }
-            _ => {}
-        }
-
-        TickResult { done: self.done }
-    }
-
-    fn read_pcode_state(&self) -> (u32, u32, u32, u32, u32, u32, u32, u32, u32) {
-        let base = self.vm_state_addr;
-        (
-            self.emu.read_word(base + vm_offsets::PC),
-            self.emu.read_word(base + vm_offsets::ESP),
-            self.emu.read_word(base + vm_offsets::CSP),
-            self.emu.read_word(base + vm_offsets::FP_VM),
-            self.emu.read_word(base + vm_offsets::GP),
-            self.emu.read_word(base + vm_offsets::HP),
-            self.emu.read_word(base + vm_offsets::CODE),
-            self.emu.read_word(base + vm_offsets::STATUS),
-            self.emu.read_word(base + vm_offsets::TRAP_CODE),
-        )
-    }
-
-    pub fn output(&self) -> String {
-        let cleaned: String = self
-            .accumulated_output
-            .chars()
-            .filter(|&c| c != '>')
-            .collect();
-        cleaned
+    #[test]
+    fn hello_runs() {
+        let src = include_str!("../examples/hello.bas");
+        let s = run_to_done(src);
+        eprintln!(
+            "status={} trap={} instrs={}",
+            s.status, s.trap_code, s.instruction_count
+        );
+        eprintln!("output={:?}", s.stdout_buf);
+        assert!(s.is_done(), "did not finish");
+        assert!(s.is_halted(), "trapped: {}", s.stop_reason());
+        assert!(
+            s.stdout_buf.contains("HELLO WORLD"),
+            "no hello: {:?}",
+            s.stdout_buf
+        );
     }
 }

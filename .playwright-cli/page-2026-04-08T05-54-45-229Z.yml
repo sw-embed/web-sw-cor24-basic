@@ -1,0 +1,14 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - heading "web-sw-cor24-basic" [level=1] [ref=e4]
+    - generic [ref=e5]:
+      - combobox [ref=e6]:
+        - option "calc"
+        - option "hello" [selected]
+      - button "Run" [ref=e7]
+      - button "Reset" [ref=e8]
+      - button "Clear" [ref=e9]
+  - generic [ref=e10]:
+    - text: source (.bas)
+    - textbox [ref=e11]: PRINT "HELLO WORLD" BYE
+  - generic [ref=e13]: "status: idle"
