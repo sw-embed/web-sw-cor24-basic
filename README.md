@@ -30,8 +30,11 @@ cd ../sw-cor24-basic && ./scripts/build-basic.sh
 # Copy the interpreter binary
 cp ../sw-cor24-basic/build/basic.p24 assets/
 
-# Serve locally
-trunk serve --release
+# Serve locally (dev mode)
+./scripts/serve.sh
+
+# Build pages for GitHub Pages deployment
+./scripts/build-pages.sh
 ```
 
 ## Controls

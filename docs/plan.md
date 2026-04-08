@@ -34,7 +34,8 @@ asm/pvm.s, .github/workflows/pages.yml, pages/.nojekyll.
 
 ## Phase 4 — Ship
 
-12. `trunk build --release` → copy `dist/` to `pages/`.
+12. `scripts/build-pages.sh` builds `dist/` with `--public-url` and
+    rsyncs to `pages/` (preserving `.nojekyll`).
 13. Verify `.github/workflows/pages.yml` deploys correctly.
 14. Enable Pages in repo settings; verify live URL.
 15. Update `README.md` with description and live link.

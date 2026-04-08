@@ -112,12 +112,18 @@ example is just dropping a `.bas` file and adding a `Demo` entry.
 
 ## GitHub Pages deployment
 
-Same pattern as `../web-sw-cor24-snobol4`:
+Same pattern as `../web-sw-cor24-pcode` and `../web-sw-cor24-macrolisp`:
 
-1. Developer runs `trunk build --release` locally.
-2. Output is copied into `pages/` and committed.
+1. Developer runs `scripts/build-pages.sh` which does `trunk build --release
+   --public-url /web-sw-cor24-basic/` then rsyncs `dist/` into `pages/`
+   (preserving `.nojekyll`).
+2. `pages/` is committed and pushed.
 3. `.github/workflows/pages.yml` uploads `./pages` as the Pages artifact on
    every push to `main`.
+
+The `--public-url` flag is critical: GitHub Pages serves static files at
+`/<repo>/`, so all asset references must be prefixed. Without it, the WASM
+and CSS paths would point to `/` which 404s on GitHub Pages.
 
 This avoids needing Rust/Trunk in CI.
 

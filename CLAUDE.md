@@ -100,13 +100,16 @@ cd ../sw-cor24-basic && ./scripts/build-basic.sh
 # Copy the interpreter binary
 cp ../sw-cor24-basic/build/basic.p24 assets/
 
-# Build and serve locally
-trunk serve --release
+# Serve locally (dev mode, requires Trunk dev server)
+./scripts/serve.sh
 ```
 
 ## GitHub Pages Deployment
 
-1. `trunk build --release` locally
-2. Copy `dist/` contents into `pages/`
-3. Commit `pages/` (including `.nojekyll`)
-4. `.github/workflows/pages.yml` deploys on push to main
+Pages must be fully standalone (no Trunk dev server). Use `scripts/build-pages.sh`
+which builds with `--public-url /web-sw-cor24-basic/` and rsyncs to `pages/`
+preserving `.nojekyll`.
+
+1. `./scripts/build-pages.sh`
+2. Commit `pages/` (including `.nojekyll`)
+3. `.github/workflows/pages.yml` deploys on push to main
