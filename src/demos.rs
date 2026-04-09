@@ -13,6 +13,10 @@ pub static DEMOS: &[Demo] = &[
         source: include_str!("../examples/factorial.bas"),
     },
     Demo {
+        name: "count",
+        source: include_str!("../examples/count.bas"),
+    },
+    Demo {
         name: "fibonacci",
         source: include_str!("../examples/fibonacci.bas"),
     },
@@ -23,6 +27,14 @@ pub static DEMOS: &[Demo] = &[
     Demo {
         name: "hello",
         source: include_str!("../examples/hello.bas"),
+    },
+    Demo {
+        name: "memdump",
+        source: include_str!("../examples/memdump.bas"),
+    },
+    Demo {
+        name: "startrek",
+        source: include_str!("../examples/startrek.bas"),
     },
 ];
 

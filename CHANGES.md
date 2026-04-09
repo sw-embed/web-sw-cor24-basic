@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-09
+
+### Demos
+
+- Port `count`, `memdump`, `startrek` from upstream `sw-cor24-basic`
+- Document new demos in `docs/demos.md` (startrek noted as non-interactive in current runner)
+
+### Fix
+
+- Restore favicon by adding `data-trunk rel="copy-file"` directive in `index.html`
+
 ## 2026-04-08
 
 ### UI

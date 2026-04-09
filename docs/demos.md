@@ -108,3 +108,45 @@ Demonstrates:
 - Variable assignment with `LET`
 - String concatenation with `;` in `PRINT`
 - Built-in functions: `ABS()`
+
+## count
+
+Trivial counter from 1 to 10 — the simplest stored-mode program.
+
+```basic
+10 REM COUNT 1 TO 10
+20 FOR I=1 TO 10
+30 PRINT I
+40 NEXT
+50 END
+```
+
+Demonstrates the bare minimum `FOR`/`NEXT` loop with a numbered-line program.
+
+## memdump
+
+Pokes three bytes (`H`, `I`, `!`) into low memory and reads them back with `PEEK`.
+
+```basic
+10 REM POKE A SHORT MESSAGE INTO LOW MEMORY AND PEEK IT BACK
+20 POKE 100,72
+30 POKE 101,73
+40 POKE 102,33
+50 FOR I=100 TO 102
+60 PRINT I;"=";PEEK(I)
+70 NEXT
+80 END
+```
+
+Demonstrates `POKE` and `PEEK` against the p-code VM's data memory.
+
+## startrek
+
+Classic Star Trek-style game — defend the Federation across an 8x8 galaxy.
+Uses `INPUT`, `GOSUB`/`RETURN`, `PEEK`/`POKE` arrays in memory, and a
+home-rolled PRNG.
+
+**Note:** the demo is interactive (uses `INPUT`). The web runner feeds source
+as a single UART stream and does not yet pipe user input back into a running
+program, so this demo will print its banner and then halt waiting for input.
+Use it for source viewing today; full interactive play is a future enhancement.
