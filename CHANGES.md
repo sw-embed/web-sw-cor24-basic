@@ -5,7 +5,20 @@
 ### Demos
 
 - Port `count`, `memdump`, `startrek` from upstream `sw-cor24-basic`
-- Document new demos in `docs/demos.md` (startrek noted as non-interactive in current runner)
+- Document new demos in `docs/demos.md`
+
+### Runner
+
+- Add interactive mode: GETC syscall pauses execution when its stdin buffer
+  is empty (interactive mode only) by rewinding PC past the syscall, allowing
+  the host to call `feed_input()` and resume.
+- `Demo` gains an `interactive` flag; `startrek` is marked interactive.
+
+### UI
+
+- Show an input field beneath the output when the running session is
+  awaiting user input; pressing Enter or clicking Send forwards the line
+  to the BASIC interpreter and resumes execution.
 
 ### Fix
 

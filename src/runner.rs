@@ -35,6 +35,8 @@ pub struct Session {
     stdin_buf: Vec<u8>,
     stdin_pos: usize,
     stdout_buf: String,
+    interactive: bool,
+    awaiting_input: bool,
 }
 
 const BATCH_SIZE: u64 = 200_000;
@@ -58,10 +60,20 @@ impl Session {
             stdin_buf: Vec::new(),
             stdin_pos: 0,
             stdout_buf: String::new(),
+            interactive: false,
+            awaiting_input: false,
         }
     }
 
     pub fn new(basic_source: &str) -> Self {
+        Self::new_with_mode(basic_source, false)
+    }
+
+    pub fn new_interactive(basic_source: &str) -> Self {
+        Self::new_with_mode(basic_source, true)
+    }
+
+    fn new_with_mode(basic_source: &str, interactive: bool) -> Self {
         let p24_bytes = crate::config::BASIC_P24;
         let image = match pa24r::load_p24(p24_bytes) {
             Ok(img) => img,
@@ -97,12 +109,21 @@ impl Session {
         for b in basic_source.bytes() {
             stdin_buf.push(b);
         }
-        if has_line_numbers {
+        if interactive {
+            // Interactive mode: load source and start RUN, but leave the stream
+            // open so the user can supply INPUT bytes (and eventually type BYE).
+            if has_line_numbers {
+                stdin_buf.extend_from_slice(b"RUN\n");
+            } else {
+                stdin_buf.push(b'\n');
+            }
+        } else if has_line_numbers {
             stdin_buf.extend_from_slice(b"RUN\nBYE\n");
+            stdin_buf.push(0x04);
         } else {
             stdin_buf.push(b'\n');
+            stdin_buf.push(0x04);
         }
-        stdin_buf.push(0x04);
 
         Session {
             mem,
@@ -121,12 +142,36 @@ impl Session {
             stdin_buf,
             stdin_pos: 0,
             stdout_buf: String::new(),
+            interactive,
+            awaiting_input: false,
         }
+    }
+
+    pub fn is_awaiting_input(&self) -> bool {
+        self.awaiting_input
+    }
+
+    /// Append a line of user input (a newline is appended automatically) and
+    /// resume execution. No-op outside interactive mode.
+    pub fn feed_input(&mut self, line: &str) {
+        if !self.interactive {
+            return;
+        }
+        for b in line.bytes() {
+            self.stdin_buf.push(b);
+        }
+        if !line.ends_with('\n') {
+            self.stdin_buf.push(b'\n');
+        }
+        self.awaiting_input = false;
     }
 
     pub fn tick(&mut self) -> TickResult {
         if self.status != 0 {
             return TickResult { done: true };
+        }
+        if self.awaiting_input {
+            return TickResult { done: false };
         }
 
         let budget = BATCH_SIZE.min(if self.instruction_count > 0 {
@@ -136,9 +181,14 @@ impl Session {
         });
 
         let mut ran = 0u64;
-        while self.status == 0 && ran < budget {
+        while self.status == 0 && !self.awaiting_input && ran < budget {
             let op_byte = self.fetch_u8();
             self.execute(op_byte);
+            if self.awaiting_input {
+                // GETC pulled an empty interactive stream and rewound PC.
+                // Don't count this as an executed instruction.
+                break;
+            }
             self.instruction_count += 1;
             ran += 1;
         }
@@ -652,14 +702,19 @@ impl Session {
                 self.stdout_buf.push(ch as char);
             }
             2 => {
-                let ch = if self.stdin_pos < self.stdin_buf.len() {
+                if self.stdin_pos < self.stdin_buf.len() {
                     let c = self.stdin_buf[self.stdin_pos];
                     self.stdin_pos += 1;
-                    c as i32
+                    self.push_eval(c as i32);
+                } else if self.interactive {
+                    // Pause execution until the host calls feed_input().
+                    // Rewind PC past the SYSCALL opcode (0x60) and its 1-byte
+                    // id so the syscall re-executes on resume.
+                    self.pc -= 2;
+                    self.awaiting_input = true;
                 } else {
-                    -1
-                };
-                self.push_eval(ch);
+                    self.push_eval(-1);
+                }
             }
             3 => {
                 self.pop_eval();
@@ -728,6 +783,55 @@ mod tests {
             s.is_done() && s.is_halted(),
             "calc failed: {}",
             s.stop_reason()
+        );
+    }
+
+    #[test]
+    fn interactive_pauses_for_input() {
+        // Tiny interactive program: read a number with INPUT, print 2*it.
+        let src = "10 INPUT \"N\";N\n20 PRINT N*2\n30 END\n";
+        let mut s = Session::new_interactive(src);
+        // Spin until either done or awaiting_input.
+        for _ in 0..2000 {
+            let r = s.tick();
+            if r.done || s.is_awaiting_input() {
+                break;
+            }
+        }
+        assert!(
+            s.is_awaiting_input(),
+            "expected pause at INPUT, status={} out={:?}",
+            s.status,
+            s.stdout_buf
+        );
+        s.feed_input("7");
+        assert!(!s.is_awaiting_input());
+        // Now resume — program should print 14 then return to REPL prompt and
+        // block waiting for the next interactive input. Send BYE to halt.
+        for _ in 0..200_000 {
+            let r = s.tick();
+            if r.done || s.is_awaiting_input() {
+                break;
+            }
+        }
+        assert!(
+            s.is_awaiting_input() || s.is_done(),
+            "expected another input pause or done"
+        );
+        if s.is_awaiting_input() {
+            s.feed_input("BYE");
+            for _ in 0..200_000 {
+                let r = s.tick();
+                if r.done {
+                    break;
+                }
+            }
+        }
+        assert!(s.is_halted(), "expected halt: {}", s.stop_reason());
+        assert!(
+            s.stdout_buf.contains("14"),
+            "missing computed output: {:?}",
+            s.stdout_buf
         );
     }
 

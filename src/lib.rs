@@ -1,5 +1,5 @@
 use gloo::timers::callback::Timeout;
-use web_sys::{HtmlSelectElement, HtmlTextAreaElement, KeyboardEvent};
+use web_sys::{HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, KeyboardEvent};
 use yew::prelude::*;
 
 pub mod config;
@@ -26,6 +26,8 @@ pub enum Msg {
     Clear,
     IncreaseBudget,
     KeyDown(KeyboardEvent),
+    InputChanged(String),
+    InputSubmit,
 }
 
 pub struct App {
@@ -40,6 +42,8 @@ pub struct App {
     started_at: f64,
     elapsed_ms: f64,
     budget_exhausted: bool,
+    input_line: String,
+    awaiting_input: bool,
 }
 
 impl App {
@@ -54,11 +58,23 @@ impl App {
             self.running = false;
             self.budget_exhausted = false;
             self.elapsed_ms = 0.0;
+            self.input_line.clear();
+            self.awaiting_input = false;
         }
     }
 
     fn start_run(&mut self, ctx: &Context<Self>) {
-        self.session = Some(Session::new(&self.source));
+        let interactive = DEMOS
+            .get(self.selected)
+            .map(|d| d.interactive)
+            .unwrap_or(false);
+        self.session = Some(if interactive {
+            Session::new_interactive(&self.source)
+        } else {
+            Session::new(&self.source)
+        });
+        self.input_line.clear();
+        self.awaiting_input = false;
         self.running = true;
         self.error = false;
         self.budget_exhausted = false;
@@ -105,6 +121,8 @@ impl Component for App {
             started_at: 0.0,
             elapsed_ms: 0.0,
             budget_exhausted: false,
+            input_line: String::new(),
+            awaiting_input: false,
         }
     }
 
@@ -168,6 +186,17 @@ impl Component for App {
                     return true;
                 }
                 let result = session.tick();
+                if session.is_awaiting_input() {
+                    self.awaiting_input = true;
+                    self.output = session.output();
+                    self.elapsed_ms = now_ms() - self.started_at;
+                    self.status = format!(
+                        "awaiting input ({} instrs, {:.0} ms)",
+                        session.instructions(),
+                        self.elapsed_ms
+                    );
+                    return true;
+                }
                 if result.done {
                     let instrs = session.instructions();
                     let reason = session.stop_reason();
@@ -191,6 +220,23 @@ impl Component for App {
                     );
                     self.schedule_tick(ctx);
                 }
+                true
+            }
+            Msg::InputChanged(v) => {
+                self.input_line = v;
+                false
+            }
+            Msg::InputSubmit => {
+                if !self.awaiting_input {
+                    return false;
+                }
+                let line = std::mem::take(&mut self.input_line);
+                if let Some(session) = self.session.as_mut() {
+                    session.feed_input(&line);
+                }
+                self.awaiting_input = false;
+                self.status = "running...".into();
+                self.schedule_tick(ctx);
                 true
             }
             Msg::KeyDown(e) => {
@@ -222,6 +268,19 @@ impl Component for App {
         let on_clear = ctx.link().callback(|_| Msg::Clear);
         let on_inc = ctx.link().callback(|_| Msg::IncreaseBudget);
         let on_keydown = ctx.link().callback(Msg::KeyDown);
+        let on_input_change = ctx.link().callback(|e: InputEvent| {
+            let target: HtmlInputElement = e.target_unchecked_into();
+            Msg::InputChanged(target.value())
+        });
+        let on_input_submit = ctx.link().callback(|_| Msg::InputSubmit);
+        let on_input_keydown = ctx.link().callback(|e: KeyboardEvent| {
+            if e.key() == "Enter" {
+                e.prevent_default();
+                Msg::InputSubmit
+            } else {
+                Msg::KeyDown(e)
+            }
+        });
 
         let status_class = if self.error {
             "status status-error"
@@ -296,6 +355,21 @@ impl Component for App {
                         } else { html! {} }}
                     </div>
                     <pre class="out">{ &self.output }</pre>
+                    { if self.awaiting_input {
+                        html! {
+                            <div class="input-row">
+                                <label>{ "input:" }</label>
+                                <input
+                                    type="text"
+                                    value={self.input_line.clone()}
+                                    oninput={on_input_change}
+                                    onkeydown={on_input_keydown}
+                                    autofocus=true
+                                />
+                                <button onclick={on_input_submit}>{ "Send" }</button>
+                            </div>
+                        }
+                    } else { html! {} }}
                 </section>
             </main>
             <footer>

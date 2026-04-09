@@ -1,40 +1,49 @@
 pub struct Demo {
     pub name: &'static str,
     pub source: &'static str,
+    pub interactive: bool,
 }
 
 pub static DEMOS: &[Demo] = &[
     Demo {
         name: "calc",
         source: include_str!("../examples/calc.bas"),
-    },
-    Demo {
-        name: "factorial",
-        source: include_str!("../examples/factorial.bas"),
+        interactive: false,
     },
     Demo {
         name: "count",
         source: include_str!("../examples/count.bas"),
+        interactive: false,
+    },
+    Demo {
+        name: "factorial",
+        source: include_str!("../examples/factorial.bas"),
+        interactive: false,
     },
     Demo {
         name: "fibonacci",
         source: include_str!("../examples/fibonacci.bas"),
+        interactive: false,
     },
     Demo {
         name: "fizzbuzz",
         source: include_str!("../examples/fizzbuzz.bas"),
+        interactive: false,
     },
     Demo {
         name: "hello",
         source: include_str!("../examples/hello.bas"),
+        interactive: false,
     },
     Demo {
         name: "memdump",
         source: include_str!("../examples/memdump.bas"),
+        interactive: false,
     },
     Demo {
         name: "startrek",
         source: include_str!("../examples/startrek.bas"),
+        interactive: true,
     },
 ];
 

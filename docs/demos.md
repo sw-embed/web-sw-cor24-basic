@@ -146,7 +146,8 @@ Classic Star Trek-style game — defend the Federation across an 8x8 galaxy.
 Uses `INPUT`, `GOSUB`/`RETURN`, `PEEK`/`POKE` arrays in memory, and a
 home-rolled PRNG.
 
-**Note:** the demo is interactive (uses `INPUT`). The web runner feeds source
-as a single UART stream and does not yet pipe user input back into a running
-program, so this demo will print its banner and then halt waiting for input.
-Use it for source viewing today; full interactive play is a future enhancement.
+This demo is **interactive**: it uses `INPUT` to read commands. When the
+running program asks for input, an input field appears below the output;
+type a command, press Enter (or Send), and execution resumes. The program
+returns to the BASIC REPL when it ends — type `BYE` in the input field to
+fully halt.
