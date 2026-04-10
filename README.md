@@ -6,6 +6,8 @@ in your browser. Zero install.
 
 **Live demo**: https://sw-embed.github.io/web-sw-cor24-basic/
 
+Part of the [Software Wrighter COR24 Tools Project](https://sw-embed.github.io/web-sw-cor24-demos/#/).
+
 ![web-sw-cor24-basic screenshot](images/screenshot.png)
 
 ## How it works
@@ -70,8 +72,16 @@ same pattern used by [`web-sw-cor24-pcode`](../web-sw-cor24-pcode).
 | [web-sw-cor24-pcode](https://github.com/sw-embed/web-sw-cor24-pcode) | Browser p-code debugger (same pattern) |
 | [web-sw-cor24-snobol4](https://github.com/sw-embed/web-sw-cor24-snobol4) | Browser SNOBOL4 sandbox (GH Pages pattern) |
 
+## Links
+
+- Blog: [Software Wrighter Lab](https://software-wrighter-lab.github.io/)
+- Discord: [Join the community](https://discord.com/invite/Ctzk5uHggZ)
+- YouTube: [Software Wrighter](https://www.youtube.com/@SoftwareWrighter)
+
+## Copyright
+
+Copyright (c) 2026 Michael A. Wright
+
 ## License
 
 MIT -- see [LICENSE](../sw-cor24-basic/LICENSE) for details.
-
-Copyright (c) 2026 Michael A Wright
