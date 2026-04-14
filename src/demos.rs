@@ -45,6 +45,11 @@ pub static DEMOS: &[Demo] = &[
         source: include_str!("../examples/startrek.bas"),
         interactive: true,
     },
+    Demo {
+        name: "trek-adventure",
+        source: include_str!("../examples/trek-adventure.bas"),
+        interactive: true,
+    },
 ];
 
 pub fn default_demo_index() -> usize {

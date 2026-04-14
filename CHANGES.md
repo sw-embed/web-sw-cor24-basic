@@ -4,6 +4,13 @@
 
 ### Demos
 
+- Add `trek-adventure` — interactive numeric-menu text adventure "Star
+  Trek: Decaying Orbit". Exercises the BASIC interpreter's `IF ... AND
+  ... THEN GOTO` compound-conditional path and multi-stage `INPUT`
+  dispatch. Registered alphabetically in `src/demos.rs` after `startrek`.
+- Re-sync `assets/basic.p24` and `examples/` from `../sw-cor24-basic` to
+  pick up the latest interpreter (including fixes required by
+  `trek-adventure`).
 - Sync examples and `assets/basic.p24` from `../sw-cor24-basic` — picks up
   the STARTREK end-to-end fixes, CHR$ support in PRINT items, and clean
   REPL exit on Ctrl-D / EOF.

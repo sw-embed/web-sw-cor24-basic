@@ -104,6 +104,7 @@ Bundled in [`examples/`](examples/) and registered in
 | `hello`     |             | "HELLO WORLD" one-liner. |
 | `memdump`   |             | `POKE` a short message, read it back with `PEEK`. |
 | `startrek`  |      ✓      | Classic Star Trek game across an 8x8 galaxy. Uses `INPUT`, `GOSUB`/`RETURN`, `PEEK`/`POKE` as arrays, and a home-rolled PRNG. |
+| `trek-adventure` | ✓     | Numeric-menu text adventure: save the Enterprise before orbit decays. Uses `IF`/`AND`, `GOSUB`/`RETURN`, room/item state across ~380 lines. |
 
 To add a new demo, see [`docs/adding-demos.md`](docs/adding-demos.md).
 

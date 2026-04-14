@@ -151,3 +151,25 @@ running program asks for input, an input field appears below the output;
 type a command, press Enter (or Send), and execution resumes. The program
 returns to the BASIC REPL when it ends — type `BYE` in the input field to
 fully halt.
+
+## trek-adventure
+
+Numeric-menu text adventure — "Star Trek: Decaying Orbit". You awaken
+alone on the bridge of the Enterprise with engines offline and orbit
+decaying. Explore nine rooms, collect items, repair the warp relay, and
+deal with Klingon boarders before the turn counter runs out.
+
+All commands are numeric: top-level actions (`1=LOOK`, `3=GO`, `4=TAKE`,
+`5=USE`, `6=THROW`, `7=FIRE`, …) and their targets (room numbers, item
+numbers) are prompted one `INPUT` at a time — no string parsing required
+from the interpreter.
+
+Demonstrates:
+- Multi-stage `INPUT` flow with a command/target sub-prompt pattern
+- `IF`/`AND` compound conditions for room-and-item dispatch
+- Deep `GOSUB`/`RETURN` nesting for rooms, inventory, events, and endings
+- Integer state machine (room `R`, turns `T`, per-item flags) as the
+  entire world model
+
+Like `startrek`, this demo is **interactive**. Type `0` (QUIT) at the
+command prompt to resign, or let the turn counter reach zero.
