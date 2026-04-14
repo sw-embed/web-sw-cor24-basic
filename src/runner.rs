@@ -5,11 +5,7 @@ const MASK24: i32 = 0x00FF_FFFF;
 
 fn sign_extend_24(v: i32) -> i32 {
     let v = v & MASK24;
-    if v & 0x0080_0000 != 0 {
-        v | !MASK24
-    } else {
-        v
-    }
+    if v & 0x0080_0000 != 0 { v | !MASK24 } else { v }
 }
 
 fn wrap24(v: i32) -> i32 {
@@ -102,7 +98,7 @@ impl Session {
 
         let has_line_numbers = basic_source.lines().any(|line| {
             let trimmed = line.trim_start();
-            trimmed.chars().next().map_or(false, |c| c.is_ascii_digit())
+            trimmed.chars().next().is_some_and(|c| c.is_ascii_digit())
         });
 
         let mut stdin_buf = Vec::new();
@@ -174,11 +170,7 @@ impl Session {
             return TickResult { done: false };
         }
 
-        let budget = BATCH_SIZE.min(if self.instruction_count > 0 {
-            20_000_000_u64.saturating_sub(self.instruction_count)
-        } else {
-            BATCH_SIZE
-        });
+        let budget = BATCH_SIZE;
 
         let mut ran = 0u64;
         while self.status == 0 && !self.awaiting_input && ran < budget {

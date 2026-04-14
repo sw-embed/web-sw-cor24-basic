@@ -6,3 +6,5 @@
 60 NEXT
 70 PRINT N;"!=";F
 80 END
+RUN
+BYE

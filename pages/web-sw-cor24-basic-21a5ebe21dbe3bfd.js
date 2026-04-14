@@ -92,6 +92,9 @@ function __wbg_get_imports() {
                 wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
             }
         },
+        __wbg_focus_93aead258d471c93: function() { return handleError(function (arg0) {
+            arg0.focus();
+        }, arguments); },
         __wbg_from_741da0f916ab74aa: function(arg0) {
             const ret = Array.from(arg0);
             return ret;
@@ -217,6 +220,10 @@ function __wbg_get_imports() {
             const ret = Promise.resolve(arg0);
             return ret;
         },
+        __wbg_scrollHeight_b1433a3ac2faabd2: function(arg0) {
+            const ret = arg0.scrollHeight;
+            return ret;
+        },
         __wbg_setAttribute_5799fb5befe29601: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             arg0.setAttribute(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
         }, arguments); },
@@ -248,6 +255,9 @@ function __wbg_get_imports() {
         },
         __wbg_set_passive_e792ae0f78abd3c5: function(arg0, arg1) {
             arg0.passive = arg1 !== 0;
+        },
+        __wbg_set_scrollTop_54bfcd90b2c39f4c: function(arg0, arg1) {
+            arg0.scrollTop = arg1;
         },
         __wbg_set_subtree_id_fc80ace73ff247a7: function(arg0, arg1) {
             arg0.__yew_subtree_id = arg1 >>> 0;

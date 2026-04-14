@@ -1,12 +1,12 @@
 use gloo::timers::callback::Timeout;
-use web_sys::{HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, KeyboardEvent};
+use web_sys::{Element, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, KeyboardEvent};
 use yew::prelude::*;
 
 pub mod config;
 pub mod demos;
 pub mod runner;
 
-use demos::{default_demo_index, DEMOS};
+use demos::{DEMOS, default_demo_index};
 use runner::Session;
 
 const DEFAULT_MAX_INSTRS: u64 = 200_000_000;
@@ -44,6 +44,8 @@ pub struct App {
     budget_exhausted: bool,
     input_line: String,
     awaiting_input: bool,
+    output_ref: NodeRef,
+    input_ref: NodeRef,
 }
 
 impl App {
@@ -123,6 +125,19 @@ impl Component for App {
             budget_exhausted: false,
             input_line: String::new(),
             awaiting_input: false,
+            output_ref: NodeRef::default(),
+            input_ref: NodeRef::default(),
+        }
+    }
+
+    fn rendered(&mut self, _ctx: &Context<Self>, _first_render: bool) {
+        if let Some(el) = self.output_ref.cast::<Element>() {
+            el.set_scroll_top(el.scroll_height());
+        }
+        if self.awaiting_input
+            && let Some(el) = self.input_ref.cast::<HtmlInputElement>()
+        {
+            let _ = el.focus();
         }
     }
 
@@ -178,12 +193,18 @@ impl Component for App {
                     self.running = false;
                     return true;
                 };
-                let remaining = self.max_instrs.saturating_sub(session.instructions());
-                if remaining == 0 {
-                    self.budget_exhausted = true;
-                    let instrs = session.instructions();
-                    self.finish(format!("halted (budget) -- {} instrs", instrs), true);
-                    return true;
+                let interactive = DEMOS
+                    .get(self.selected)
+                    .map(|d| d.interactive)
+                    .unwrap_or(false);
+                if !interactive {
+                    let remaining = self.max_instrs.saturating_sub(session.instructions());
+                    if remaining == 0 {
+                        self.budget_exhausted = true;
+                        let instrs = session.instructions();
+                        self.finish(format!("halted (budget) -- {} instrs", instrs), true);
+                        return true;
+                    }
                 }
                 let result = session.tick();
                 if session.is_awaiting_input() {
@@ -329,18 +350,18 @@ impl Component for App {
                         <button class="secondary" onclick={on_clear}>{ "Clear" }</button>
                     </div>
                 </header>
-                <section class="panel">
+                <div class="workspace">
+                <section class="panel panel-src">
                     <label>{ "source (.bas)" }</label>
                     <textarea
                         class="src"
-                        rows="14"
                         spellcheck="false"
                         value={self.source.clone()}
                         oninput={on_src}
                         onkeydown={on_keydown.clone()}
                     />
                 </section>
-                <section class="panel">
+                <section class="panel panel-out">
                     <div class={status_class}>
                         { format!("status: {}", self.status) }
                         { if self.budget_exhausted {
@@ -354,12 +375,13 @@ impl Component for App {
                             }
                         } else { html! {} }}
                     </div>
-                    <pre class="out">{ &self.output }</pre>
+                    <pre class="out" ref={self.output_ref.clone()}>{ &self.output }</pre>
                     { if self.awaiting_input {
                         html! {
                             <div class="input-row">
                                 <label>{ "input:" }</label>
                                 <input
+                                    ref={self.input_ref.clone()}
                                     type="text"
                                     value={self.input_line.clone()}
                                     oninput={on_input_change}
@@ -371,6 +393,7 @@ impl Component for App {
                         }
                     } else { html! {} }}
                 </section>
+                </div>
             </main>
             <footer>
                 <span>{"MIT License"}</span>

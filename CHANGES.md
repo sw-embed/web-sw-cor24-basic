@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-04-14
+
+### Demos
+
+- Sync examples and `assets/basic.p24` from `../sw-cor24-basic` — picks up
+  the STARTREK end-to-end fixes, CHR$ support in PRINT items, and clean
+  REPL exit on Ctrl-D / EOF.
+
+### Runner
+
+- Remove the hidden 20M-instruction cap inside `Session::tick()` that
+  silently stalled long-running sessions once their instruction count
+  passed the threshold (no output, no halt, no status change).
+- Interactive demos bypass the UI-level `max_instrs` budget so turn-based
+  games (`startrek`) can run indefinitely without surprise `halted
+  (budget)` errors.
+
+### UI
+
+- Two-column workspace: source panel on the left, output + input on the
+  right. Each panel scrolls internally inside a viewport-bounded frame,
+  instead of the whole page growing unboundedly as output arrives.
+- Output panel auto-scrolls to the bottom after each render.
+- Input field re-focuses after every iteration so typing in an
+  interactive program (e.g. `startrek`) is uninterrupted.
+- Collapses to a single column under 900px wide.
+
+### Docs
+
+- Rewrite `README.md` with explicit Intro / Overview / Build / Usage /
+  Demos sections and a fresh interactive `startrek` screenshot
+  (`images/screenshot-startrek.png`).
+
 ## 2026-04-09
 
 ### Demos
