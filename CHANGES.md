@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-15
+
+### Demos
+
+- Re-sync `examples/robot-chase.bas` from `../sw-cor24-basic` — upstream
+  expanded the board from 12x12 to 16x16 (12 robots, 3 teleports, 4x4
+  LRS regions). Also picks up the `PRINT ""`-vs-bare-`PRINT` hardening
+  so rows render correctly on older interpreter builds.
+- Re-sync `assets/basic.p24` from `../sw-cor24-basic` — picks up the
+  PRINT double-newline fix required by the updated `robot-chase`.
+
 ## 2026-04-14
 
 ### Demos
