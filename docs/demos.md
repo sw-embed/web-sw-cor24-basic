@@ -140,6 +140,28 @@ Pokes three bytes (`H`, `I`, `!`) into low memory and reads them back with `PEEK
 
 Demonstrates `POKE` and `PEEK` against the p-code VM's data memory.
 
+## robot-chase
+
+Turn-based robot-chase on a 12x12 grid — make the robots collide with each
+other or walk into wreckage while you evade them. Inspired by the classic
+BSD `robots` game.
+
+Commands are numpad-style digits: `1`–`9` for the eight compass moves plus
+`5=WAIT`, `0=TELEPORT` (two per game), `10=LRS` for a 3x3 regional
+summary, and `99=RESIGN`.
+
+Demonstrates:
+- Using `POKE`/`PEEK` as a 2D array (144-cell board) plus three parallel
+  arrays for robot X/Y/alive state
+- A home-rolled linear-congruential PRNG seeded from the persistent
+  variable `R` — the seed carries over across `RUN` invocations inside
+  the same REPL so repeated games see different boards
+- Multi-phase turn logic: player move → robot step → wreck collision →
+  robot-robot collision → repaint
+
+Like the other games, this demo is **interactive**. Type `99` at the
+command prompt to resign.
+
 ## startrek
 
 Classic Star Trek-style game — defend the Federation across an 8x8 galaxy.

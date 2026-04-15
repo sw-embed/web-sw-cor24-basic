@@ -4,6 +4,10 @@
 
 ### Demos
 
+- Add `robot-chase` — interactive 12x12 turn-based robot chase driven
+  by `POKE`/`PEEK` as a 2D board, numpad-style move commands, teleport,
+  LRS, and robot-vs-robot collision logic. Registered alphabetically in
+  `src/demos.rs` between `memdump` and `startrek`.
 - Add `trek-adventure` — interactive numeric-menu text adventure "Star
   Trek: Decaying Orbit". Exercises the BASIC interpreter's `IF ... AND
   ... THEN GOTO` compound-conditional path and multi-stage `INPUT`

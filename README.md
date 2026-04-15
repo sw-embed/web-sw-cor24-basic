@@ -103,6 +103,7 @@ Bundled in [`examples/`](examples/) and registered in
 | `fizzbuzz`  |             | `IF`/`GOTO` branching, 1..15. |
 | `hello`     |             | "HELLO WORLD" one-liner. |
 | `memdump`   |             | `POKE` a short message, read it back with `PEEK`. |
+| `robot-chase` |    ✓      | Turn-based 12x12 robot chase on a `POKE`/`PEEK` grid. Numpad-style movement, teleport, LRS, and robot-vs-robot collision logic. |
 | `startrek`  |      ✓      | Classic Star Trek game across an 8x8 galaxy. Uses `INPUT`, `GOSUB`/`RETURN`, `PEEK`/`POKE` as arrays, and a home-rolled PRNG. |
 | `trek-adventure` | ✓     | Numeric-menu text adventure: save the Enterprise before orbit decays. Uses `IF`/`AND`, `GOSUB`/`RETURN`, room/item state across ~380 lines. |
 
