@@ -101,6 +101,7 @@ Bundled in [`examples/`](examples/) and registered in
 | `factorial` |             | Iterative factorial with `FOR`/`NEXT`. |
 | `fibonacci` |             | First 10 Fibonacci numbers. |
 | `fizzbuzz`  |             | `IF`/`GOTO` branching, 1..15. |
+| `guess`     |      ✓      | Guess-the-number game with `INPUT` and `IF`/`GOTO`. |
 | `hello`     |             | "HELLO WORLD" one-liner. |
 | `memdump`   |             | `POKE` a short message, read it back with `PEEK`. |
 | `robot-chase` |    ✓      | Turn-based 16x16 robot chase on a `POKE`/`PEEK` grid. Numpad-style movement, teleport, LRS, and robot-vs-robot collision logic. |

@@ -84,6 +84,33 @@ Demonstrates:
 - Integer divisibility testing via `(I/N)*N=I`
 - Multi-way branching pattern
 
+## guess
+
+Classic guess-the-number game. The interpreter "thinks" of a fixed target
+(42) and prompts for guesses until the user finds it, replying `HIGHER!` or
+`LOWER!` after each attempt.
+
+```basic
+10 REM *** GUESS THE NUMBER FOR COR24 BASIC V1 ***
+100 PRINT "--- GUESS THE NUMBER ---"
+110 PRINT "I AM THINKING OF A NUMBER BETWEEN 1 AND 100."
+120 LET T = 42
+130 INPUT "YOUR GUESS "; G
+140 IF G = T THEN GOTO 200
+150 IF G < T THEN PRINT "HIGHER!"
+160 IF G > T THEN PRINT "LOWER!"
+170 GOTO 130
+200 PRINT "CORRECT! YOU GUESSED IT."
+210 BYE
+```
+
+This demo is **interactive**: type a number and press Enter when prompted.
+
+Demonstrates:
+- `INPUT` with a prompt string and a numeric variable
+- `IF`/`THEN`/`GOTO` for the guess-loop dispatch
+- `BYE` to exit cleanly when the user wins
+
 ## calc
 
 Arithmetic expressions with variables and built-in functions.

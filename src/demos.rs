@@ -31,6 +31,11 @@ pub static DEMOS: &[Demo] = &[
         interactive: false,
     },
     Demo {
+        name: "guess",
+        source: include_str!("../examples/guess.bas"),
+        interactive: true,
+    },
+    Demo {
         name: "hello",
         source: include_str!("../examples/hello.bas"),
         interactive: false,
