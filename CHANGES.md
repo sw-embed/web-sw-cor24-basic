@@ -1,5 +1,44 @@
 # Changelog
 
+## 2026-04-25
+
+### Demos
+
+- Add six new feature demos vendored from `../sw-cor24-basic`, all
+  registered alphabetically in `src/demos.rs`:
+  - `bitwise-demo` — `BAND`/`BOR`/`BXOR`/`SHL`/`SHR` plus tagged-int
+    helpers and byte packing.
+  - `cont-demo` — `STOP` mid-program, then REPL-level `CONT` to resume.
+  - `data-demo` — `DATA`/`READ`/`RESTORE`, including `RESTORE <line>`
+    and negative literals.
+  - `dim-demo` — `DIM` integer arrays, scalar/array namespace
+    separation, expression subscripts.
+  - `mod-demo` — FizzBuzz with the new `MOD` operator instead of the
+    `(I/N)*N=I` workaround.
+  - `on-demo` — `ON expr GOSUB` for O(1) bytecode-style dispatch.
+- Re-sync `assets/basic.p24` (13508 → 17956 bytes) to pick up the
+  upstream interpreter rebuild that adds the keywords used by these
+  demos: `DIM`, `DATA`, `READ`, `RESTORE`, `ON`, `MOD`, `BAND`, `BOR`,
+  `BXOR`, `SHL`, `SHR`, `CONT`.
+
+### UI
+
+- Add 96px right padding to the `.chrome` header row so the Run / Reset
+  / Clear buttons no longer sit underneath the 80x80 GitHub-corner
+  octocat at narrower viewport widths (Clear was unclickable on common
+  laptop widths).
+
+## 2026-04-24
+
+### Demos
+
+- Add `guess` — interactive guess-the-number demo vendored from
+  `../sw-cor24-basic`. Exercises `INPUT`, `IF`/`THEN`/`GOTO`, and clean
+  `BYE` exit.
+- Skip upstream `blink.bas`: it `POKE`s a hardware LED address
+  (`0xFF0000`) that traps on the host-side p-code interpreter the web
+  sandbox runs on (the comment in the file itself notes this).
+
 ## 2026-04-15
 
 ### Demos
