@@ -96,14 +96,20 @@ Bundled in [`examples/`](examples/) and registered in
 
 | Name        | Interactive | Summary |
 |-------------|:-----------:|---------|
+| `bitwise-demo` |          | `BAND`/`BOR`/`BXOR`/`SHL`/`SHR` plus tagged-int helpers and byte packing. |
 | `calc`      |             | Arithmetic, variables, `ABS`. |
+| `cont-demo` |             | `STOP` mid-program, then `CONT` from the REPL to resume. |
 | `count`     |             | Minimal `FOR`/`NEXT` loop, 1..10. |
+| `data-demo` |             | `DATA`/`READ`/`RESTORE`, including `RESTORE <line>` and negative values. |
+| `dim-demo`  |             | `DIM` integer arrays, scalar/array namespace separation, expression subscripts. |
 | `factorial` |             | Iterative factorial with `FOR`/`NEXT`. |
 | `fibonacci` |             | First 10 Fibonacci numbers. |
 | `fizzbuzz`  |             | `IF`/`GOTO` branching, 1..15. |
 | `guess`     |      ✓      | Guess-the-number game with `INPUT` and `IF`/`GOTO`. |
 | `hello`     |             | "HELLO WORLD" one-liner. |
 | `memdump`   |             | `POKE` a short message, read it back with `PEEK`. |
+| `mod-demo`  |             | `MOD` operator — clean FizzBuzz without `(I/N)*N=I`. |
+| `on-demo`   |             | `ON expr GOSUB` for O(1) bytecode-style dispatch. |
 | `robot-chase` |    ✓      | Turn-based 16x16 robot chase on a `POKE`/`PEEK` grid. Numpad-style movement, teleport, LRS, and robot-vs-robot collision logic. |
 | `startrek`  |      ✓      | Classic Star Trek game across an 8x8 galaxy. Uses `INPUT`, `GOSUB`/`RETURN`, `PEEK`/`POKE` as arrays, and a home-rolled PRNG. |
 | `trek-adventure` | ✓     | Numeric-menu text adventure: save the Enterprise before orbit decays. Uses `IF`/`AND`, `GOSUB`/`RETURN`, room/item state across ~380 lines. |

@@ -6,13 +6,33 @@ pub struct Demo {
 
 pub static DEMOS: &[Demo] = &[
     Demo {
+        name: "bitwise-demo",
+        source: include_str!("../examples/bitwise-demo.bas"),
+        interactive: false,
+    },
+    Demo {
         name: "calc",
         source: include_str!("../examples/calc.bas"),
         interactive: false,
     },
     Demo {
+        name: "cont-demo",
+        source: include_str!("../examples/cont-demo.bas"),
+        interactive: false,
+    },
+    Demo {
         name: "count",
         source: include_str!("../examples/count.bas"),
+        interactive: false,
+    },
+    Demo {
+        name: "data-demo",
+        source: include_str!("../examples/data-demo.bas"),
+        interactive: false,
+    },
+    Demo {
+        name: "dim-demo",
+        source: include_str!("../examples/dim-demo.bas"),
         interactive: false,
     },
     Demo {
@@ -43,6 +63,16 @@ pub static DEMOS: &[Demo] = &[
     Demo {
         name: "memdump",
         source: include_str!("../examples/memdump.bas"),
+        interactive: false,
+    },
+    Demo {
+        name: "mod-demo",
+        source: include_str!("../examples/mod-demo.bas"),
+        interactive: false,
+    },
+    Demo {
+        name: "on-demo",
+        source: include_str!("../examples/on-demo.bas"),
         interactive: false,
     },
     Demo {

@@ -222,3 +222,81 @@ Demonstrates:
 
 Like `startrek`, this demo is **interactive**. Type `0` (QUIT) at the
 command prompt to resign, or let the turn counter reach zero.
+
+## bitwise-demo
+
+Exercises the integer bitwise operators — `BAND`, `BOR`, `BXOR`, `SHL`,
+`SHR` — and shows the tagged-integer helpers and byte-packing patterns
+that motivated them.
+
+Demonstrates:
+- `BAND` / `BOR` / `BXOR` on small constants
+- Left/right shifts (`SHL`, `SHR`)
+- Smalltalk-style tag-bit checks (`V BAND 1`, `V SHR 1`, `(P SHL 1) BOR 1`)
+- Packing two bytes into one word and unpacking again
+
+## cont-demo
+
+Smallest possible demo of `STOP` plus REPL-level `CONT`. The program
+pauses with `A=1`, the REPL prints `A`, and `CONT` resumes the next line
+to print `2`.
+
+```basic
+10 LET A = 1
+20 STOP
+30 LET A = A + 1
+40 PRINT A
+RUN
+PRINT A
+CONT
+BYE
+```
+
+Demonstrates:
+- `STOP` returns to the REPL without losing variables
+- `PRINT` in immediate mode while the program is paused
+- `CONT` resumes execution at the line after `STOP`
+
+## data-demo
+
+Walks through `DATA` / `READ` / `RESTORE`: a 10-element data block read
+into a `POKE` buffer, a plain `RESTORE` to rewind to the first value, and
+`RESTORE <line>` to jump to a specific `DATA` line. Includes negative
+data values.
+
+Demonstrates:
+- `DATA` lines contributing to a global read pointer
+- `READ <var>` to consume the next value
+- `RESTORE` (rewind to first) vs. `RESTORE <line>` (jump to specific)
+- Negative integer literals in `DATA`
+
+## dim-demo
+
+Declares two integer arrays with `DIM`, fills them with squares and
+cubes, and shows that scalar `S` and array `S()` live in distinct
+namespaces.
+
+Demonstrates:
+- `DIM <name>(<size>)` — declares an integer array indexed `0..size`
+- Multiple arrays in one `DIM` (`DIM S(9), C(4)`)
+- Scalar vs. array namespace separation (`S` and `S()` coexist)
+- Expressions as subscripts (`S(J+2)`)
+
+## mod-demo
+
+FizzBuzz reimplemented with the new `MOD` operator instead of the
+`(I/N)*N=I` trick used in the original `fizzbuzz` demo.
+
+Demonstrates:
+- `MOD` operator on integer expressions
+- Cleaner divisibility tests than the divide-then-multiply workaround
+
+## on-demo
+
+Computed `ON expr GOSUB <line>, <line>, ...` for O(1) dispatch — used
+here to emulate a tiny 4-opcode bytecode interpreter.
+
+Demonstrates:
+- `ON <expr> GOSUB <line>[, <line>...]` for indexed subroutine dispatch
+- Using `ON GOSUB` to collapse a deep `IF` chain
+- A bytecode-interpreter-style dispatch loop in BASIC
