@@ -100,6 +100,14 @@ impl Session {
             let trimmed = line.trim_start();
             trimmed.chars().next().is_some_and(|c| c.is_ascii_digit())
         });
+        // Demo source files conventionally end with a literal "RUN" line so a
+        // human typing them into a REPL gets auto-run. Don't double up.
+        let source_ends_with_run = basic_source
+            .lines()
+            .rev()
+            .find(|l| !l.trim().is_empty())
+            .map(|l| l.trim().eq_ignore_ascii_case("RUN"))
+            .unwrap_or(false);
 
         let mut stdin_buf = Vec::new();
         for b in basic_source.bytes() {
@@ -109,12 +117,17 @@ impl Session {
             // Interactive mode: load source and start RUN, but leave the stream
             // open so the user can supply INPUT bytes (and eventually type BYE).
             if has_line_numbers {
-                stdin_buf.extend_from_slice(b"RUN\n");
+                if !source_ends_with_run {
+                    stdin_buf.extend_from_slice(b"RUN\n");
+                }
             } else {
                 stdin_buf.push(b'\n');
             }
         } else if has_line_numbers {
-            stdin_buf.extend_from_slice(b"RUN\nBYE\n");
+            if !source_ends_with_run {
+                stdin_buf.extend_from_slice(b"RUN\n");
+            }
+            stdin_buf.extend_from_slice(b"BYE\n");
             stdin_buf.push(0x04);
         } else {
             stdin_buf.push(b'\n');
@@ -730,6 +743,15 @@ impl Session {
                 self.pop_eval();
             }
             8 => {}
+            9 => {
+                if self.stdin_pos < self.stdin_buf.len() {
+                    let c = self.stdin_buf[self.stdin_pos];
+                    self.stdin_pos += 1;
+                    self.push_eval(c as i32);
+                } else {
+                    self.push_eval(-1);
+                }
+            }
             _ => {
                 self.trap(4);
             }

@@ -57,6 +57,7 @@ pub struct App {
     input_ref: NodeRef,
     show_help: bool,
     help_tab: HelpTab,
+    focus_input_pending: bool,
 }
 
 impl App {
@@ -95,6 +96,7 @@ impl App {
         self.started_at = now_ms();
         self.elapsed_ms = 0.0;
         self.status = "running...".into();
+        self.focus_input_pending = interactive;
         self.schedule_tick(ctx);
     }
 
@@ -140,6 +142,7 @@ impl Component for App {
             input_ref: NodeRef::default(),
             show_help: false,
             help_tab: HelpTab::Guide,
+            focus_input_pending: false,
         }
     }
 
@@ -147,11 +150,13 @@ impl Component for App {
         if let Some(el) = self.output_ref.cast::<Element>() {
             el.set_scroll_top(el.scroll_height());
         }
-        if self.awaiting_input
+        let want_focus = self.awaiting_input || self.focus_input_pending;
+        if want_focus
             && let Some(el) = self.input_ref.cast::<HtmlInputElement>()
         {
             let _ = el.focus();
         }
+        self.focus_input_pending = false;
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
@@ -261,16 +266,21 @@ impl Component for App {
                 false
             }
             Msg::InputSubmit => {
-                if !self.awaiting_input {
+                if !self.running {
                     return false;
                 }
                 let line = std::mem::take(&mut self.input_line);
+                let was_awaiting = self.awaiting_input;
                 if let Some(session) = self.session.as_mut() {
                     session.feed_input(&line);
                 }
-                self.awaiting_input = false;
-                self.status = "running...".into();
-                self.schedule_tick(ctx);
+                if was_awaiting {
+                    // Was blocked at INPUT (line-based GETC). feed_input cleared
+                    // the pause flag — resume the tick loop.
+                    self.awaiting_input = false;
+                    self.status = "running...".into();
+                    self.schedule_tick(ctx);
+                }
                 true
             }
             Msg::KeyDown(e) => {
@@ -336,6 +346,11 @@ impl Component for App {
         let on_help_close = ctx.link().callback(|_| Msg::HideHelp);
         let on_help_guide = ctx.link().callback(|_| Msg::SelectHelpTab(HelpTab::Guide));
         let on_help_ref = ctx.link().callback(|_| Msg::SelectHelpTab(HelpTab::Reference));
+        let interactive = DEMOS
+            .get(self.selected)
+            .map(|d| d.interactive)
+            .unwrap_or(false);
+        let show_input_row = self.running && interactive;
 
         let status_class = if self.error {
             "status status-error"
@@ -441,7 +456,7 @@ impl Component for App {
                         } else { html! {} }}
                     </div>
                     <pre class="out" ref={self.output_ref.clone()}>{ &self.output }</pre>
-                    { if self.awaiting_input {
+                    { if show_input_row {
                         html! {
                             <div class="input-row">
                                 <label>{ "input:" }</label>

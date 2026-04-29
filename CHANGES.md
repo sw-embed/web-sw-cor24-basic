@@ -2,6 +2,26 @@
 
 ## 2026-04-29
 
+### Runtime
+
+- Implement syscall **id=9 (INKEY)** in the browser p-code runner:
+  consume one byte from stdin if available, else return -1
+  immediately. Never blocks. Mirrors the upstream `sys_inkey`
+  shipped in `sw-cor24-pcode/vm/pvm.s` (id=9, dabe6f3) so the
+  matching BASIC `INKEY` builtin (`sw-cor24-basic` 39c3271) actually
+  works in this sandbox.
+- Sync `assets/basic.p24` to the upstream rebuild that adds `INKEY`
+  as keyword #37 (17956 → 18055 bytes). The upstream commit
+  reshuffled the Pascal token layout (operator base `TP` 164 → 180,
+  reserving room for up to 48 keywords), so this is a *required*
+  pairing — old and new `.p24` images aren't interchangeable.
+- Fix `runner.rs::new_with_mode` to skip its appended `RUN\n` when
+  the source already ends with one. Every demo file conventionally
+  ends with `RUN` so a human can paste the listing into a REPL and
+  auto-run; the runner was double-stamping, leaving stray `RUN\n`
+  bytes in stdin that INKEY would then consume as fake "user input"
+  (and that earlier caused intermittent `?REDO` lines on `INPUT`).
+
 ### UI
 
 - Add a **Help** button (rightmost in the chrome controls) that opens a
@@ -13,14 +33,22 @@
 - Reflow `.chrome` right padding 96 → 120px so the new Help button
   still clears the 80x80 GitHub-corner octocat plus its diagonal
   triangle at narrower viewport widths.
+- Show the input row whenever an interactive demo is running, not
+  just when the program is blocked at `INPUT`. Required for the
+  INKEY-loop pattern, where the program polls non-blocking and
+  needs the user to be able to deposit a byte mid-run. The same
+  field continues to feed bytes into `INPUT` when the program asks
+  for a line. Auto-focus on the field at run start.
 
 ### Demos
 
-- Add `guess-random.bas` — variant of `guess` that derives the target
-  from a seeded LCG (`R=42`; two `(R*97+1) MOD 8191` steps; target =
-  `(R MOD 100)+1` = **9**). Demonstrates the seed-based PRNG pattern
-  for COR24 BASIC, which has no built-in `RND`. Constants chosen so
-  the LCG product fits within 24-bit signed range.
+- Add `guess-random.bas` — interactive variant of `guess` that
+  derives the target from **real reaction-time entropy** via
+  `INKEY`. After draining any stale stdin bytes, R increments in a
+  tight `IF INKEY < 0` loop until the user presses Enter; R is then
+  passed through two LCG steps and reduced to 1..100. The target
+  varies across runs because R depends on the exact instant the
+  user hits Enter. No host clock is involved; the COR24 VM has none.
 
 ## 2026-04-25
 
