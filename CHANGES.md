@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-04-29
+
+### UI
+
+- Add a **Help** button (rightmost in the chrome controls) that opens a
+  modal with two tabs: a **User Guide** (getting-started, control flow,
+  arrays, DATA/READ, an explicit "no built-in `RND` — roll your own
+  LCG" section) and a **Reference** (statements, operator precedence,
+  built-in functions, limits, runtime error codes). Closes via the
+  ×, the overlay, or `Esc`.
+- Reflow `.chrome` right padding 96 → 120px so the new Help button
+  still clears the 80x80 GitHub-corner octocat plus its diagonal
+  triangle at narrower viewport widths.
+
+### Demos
+
+- Add `guess-random.bas` — variant of `guess` that derives the target
+  from a seeded LCG (`R=42`; two `(R*97+1) MOD 8191` steps; target =
+  `(R MOD 100)+1` = **9**). Demonstrates the seed-based PRNG pattern
+  for COR24 BASIC, which has no built-in `RND`. Constants chosen so
+  the LCG product fits within 24-bit signed range.
+
 ## 2026-04-25
 
 ### Demos

@@ -16,6 +16,12 @@ fn now_ms() -> f64 {
     js_sys::Date::now()
 }
 
+#[derive(PartialEq, Clone, Copy)]
+pub enum HelpTab {
+    Guide,
+    Reference,
+}
+
 pub enum Msg {
     SelectDemo(usize),
     SourceChanged(String),
@@ -28,6 +34,9 @@ pub enum Msg {
     KeyDown(KeyboardEvent),
     InputChanged(String),
     InputSubmit,
+    ShowHelp,
+    HideHelp,
+    SelectHelpTab(HelpTab),
 }
 
 pub struct App {
@@ -46,6 +55,8 @@ pub struct App {
     awaiting_input: bool,
     output_ref: NodeRef,
     input_ref: NodeRef,
+    show_help: bool,
+    help_tab: HelpTab,
 }
 
 impl App {
@@ -127,6 +138,8 @@ impl Component for App {
             awaiting_input: false,
             output_ref: NodeRef::default(),
             input_ref: NodeRef::default(),
+            show_help: false,
+            help_tab: HelpTab::Guide,
         }
     }
 
@@ -264,11 +277,28 @@ impl Component for App {
                 if e.key() == "Enter" && (e.ctrl_key() || e.meta_key()) {
                     e.prevent_default();
                     ctx.link().send_message(Msg::Run);
-                } else if e.key() == "Escape" && self.running {
-                    e.prevent_default();
-                    ctx.link().send_message(Msg::Stop);
+                } else if e.key() == "Escape" {
+                    if self.show_help {
+                        e.prevent_default();
+                        ctx.link().send_message(Msg::HideHelp);
+                    } else if self.running {
+                        e.prevent_default();
+                        ctx.link().send_message(Msg::Stop);
+                    }
                 }
                 false
+            }
+            Msg::ShowHelp => {
+                self.show_help = true;
+                true
+            }
+            Msg::HideHelp => {
+                self.show_help = false;
+                true
+            }
+            Msg::SelectHelpTab(t) => {
+                self.help_tab = t;
+                true
             }
         }
     }
@@ -302,6 +332,10 @@ impl Component for App {
                 Msg::KeyDown(e)
             }
         });
+        let on_help_open = ctx.link().callback(|_| Msg::ShowHelp);
+        let on_help_close = ctx.link().callback(|_| Msg::HideHelp);
+        let on_help_guide = ctx.link().callback(|_| Msg::SelectHelpTab(HelpTab::Guide));
+        let on_help_ref = ctx.link().callback(|_| Msg::SelectHelpTab(HelpTab::Reference));
 
         let status_class = if self.error {
             "status status-error"
@@ -314,8 +348,38 @@ impl Component for App {
             html! { <button onclick={on_run}>{ "Run" }</button> }
         };
 
+        let help_dialog = if self.show_help {
+            let stop = Callback::from(|e: MouseEvent| e.stop_propagation());
+            let guide_class = if self.help_tab == HelpTab::Guide { "help-tab help-tab-active" } else { "help-tab" };
+            let ref_class = if self.help_tab == HelpTab::Reference { "help-tab help-tab-active" } else { "help-tab" };
+            let body = match self.help_tab {
+                HelpTab::Guide => help_guide_html(),
+                HelpTab::Reference => help_reference_html(),
+            };
+            html! {
+                <div class="help-overlay" onclick={on_help_close.clone()}>
+                    <div class="help-dialog" onclick={stop}>
+                        <div class="help-header">
+                            <h2>{ "BASIC Help" }</h2>
+                            <button class="help-close" aria-label="Close" onclick={on_help_close.clone()}>
+                                { "\u{2715}" }
+                            </button>
+                        </div>
+                        <div class="help-tabs" role="tablist">
+                            <button class={guide_class} onclick={on_help_guide}>{ "User Guide" }</button>
+                            <button class={ref_class} onclick={on_help_ref}>{ "Reference" }</button>
+                        </div>
+                        <div class="help-content">{ body }</div>
+                    </div>
+                </div>
+            }
+        } else {
+            html! {}
+        };
+
         html! {
             <>
+            { help_dialog }
             <a href="https://github.com/sw-embed/web-sw-cor24-basic" class="github-corner"
                aria-label="View source on GitHub" target="_blank">
                 <svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true">
@@ -348,6 +412,7 @@ impl Component for App {
                         { run_button }
                         <button class="secondary" onclick={on_reset} disabled={self.running}>{ "Reset" }</button>
                         <button class="secondary" onclick={on_clear}>{ "Clear" }</button>
+                        <button class="secondary" onclick={on_help_open}>{ "Help" }</button>
                     </div>
                 </header>
                 <div class="workspace">
@@ -420,5 +485,117 @@ impl Component for App {
             </footer>
             </>
         }
+    }
+}
+
+fn help_guide_html() -> Html {
+    html! {
+        <>
+        <h3>{ "Getting started" }</h3>
+        <p>{ "COR24 BASIC v1 is a line-numbered BASIC. Pick a demo from the dropdown, hit " }<b>{ "Run" }</b>{ ", or edit the source and press " }<kbd>{ "Cmd/Ctrl+Enter" }</kbd>{ ". " }<kbd>{ "Esc" }</kbd>{ " stops a running program." }</p>
+        <p>{ "Programs end with " }<code>{ "BYE" }</code>{ " (halt) or " }<code>{ "END" }</code>{ ". Use " }<code>{ "STOP" }</code>{ " to pause; " }<code>{ "CONT" }</code>{ " in immediate mode resumes." }</p>
+
+        <h3>{ "Variables and types" }</h3>
+        <p>{ "26 single-letter variables A..Z, all 24-bit signed integers (\u{2248} \u{00b1}8.3M). No floating point. No string variables (no A$). String " }<i>{ "literals" }</i>{ " work in PRINT only." }</p>
+
+        <h3>{ "PRINT and INPUT" }</h3>
+<pre>{ "10 PRINT \"HELLO\", X    REM comma = next 14-col tab stop\n20 PRINT \"X=\"; X        REM semicolon = no newline\n30 INPUT \"GUESS \"; G    REM read integer into G" }</pre>
+
+        <h3>{ "Control flow" }</h3>
+<pre>{ "100 IF X < 10 THEN PRINT \"SMALL\"\n110 IF X = 0 THEN GOTO 200\n200 FOR I = 1 TO 10 STEP 2\n210   PRINT I\n220 NEXT I\n300 ON K GOTO 310, 320, 330\n400 GOSUB 500\n500 RETURN" }</pre>
+
+        <h3>{ "Arrays (DIM)" }</h3>
+<pre>{ "10 DIM A(99)            REM A(0)..A(99), shared 1024-int pool\n20 LET A(5) = 42" }</pre>
+
+        <h3>{ "DATA / READ / RESTORE" }</h3>
+<pre>{ "10 DATA 3, 1, 4, 1, 5, 9\n20 FOR I=1 TO 6\n30 READ X : PRINT X\n40 NEXT I\n50 RESTORE          REM rewind data pointer" }</pre>
+
+        <h3>{ "Random numbers from a seed" }</h3>
+        <p>{ "There is " }<b>{ "no built-in RND or RANDOMIZE" }</b>{ " in this dialect. Roll your own LCG from a seed. The " }<code>{ "robot-chase" }</code>{ " demo uses:" }</p>
+<pre>{ "10 LET R = 42                        REM seed\n20 LET R = (R*97 + 1) MOD 8191        REM step\n30 LET T = (R MOD 100) + 1            REM 1..100" }</pre>
+        <p>{ "Call the step every time you need a new draw. Same seed \u{2192} same sequence (deterministic, good for testing)." }</p>
+
+        <h3>{ "Memory: PEEK / POKE" }</h3>
+        <p>{ "1024 bytes of user memory at addresses 0..1023. " }<code>{ "POKE addr, val" }</code>{ " writes; " }<code>{ "PEEK(addr)" }</code>{ " reads." }</p>
+
+        <h3>{ "Tips" }</h3>
+        <ul>
+            <li>{ "Line numbers must be ascending in storage; gaps are fine." }</li>
+            <li>{ "Multiple statements per line with " }<code>{ ":" }</code>{ "." }</li>
+            <li>{ "If a program runs out of instruction budget, click " }<i>{ "Increase budget 4x" }</i>{ " in the status bar." }</li>
+        </ul>
+        </>
+    }
+}
+
+fn help_reference_html() -> Html {
+    html! {
+        <>
+        <h3>{ "Statements" }</h3>
+        <table class="help-table">
+            <tr><td><code>{ "LET v = expr" }</code></td><td>{ "assignment (LET optional)" }</td></tr>
+            <tr><td><code>{ "PRINT expr [,;] ..." }</code></td><td>{ ", = tab; ; = no newline" }</td></tr>
+            <tr><td><code>{ "INPUT [\"prompt\";] v" }</code></td><td>{ "read integer" }</td></tr>
+            <tr><td><code>{ "IF cond THEN stmt" }</code></td><td>{ "single-line conditional" }</td></tr>
+            <tr><td><code>{ "FOR v=a TO b [STEP s]" }</code></td><td>{ "loop (max 16 nested)" }</td></tr>
+            <tr><td><code>{ "NEXT v" }</code></td></tr>
+            <tr><td><code>{ "GOTO n" }</code></td></tr>
+            <tr><td><code>{ "GOSUB n / RETURN" }</code></td><td>{ "max 64-deep call stack" }</td></tr>
+            <tr><td><code>{ "ON e GOTO|GOSUB n1, n2, ..." }</code></td><td>{ "1-based dispatch" }</td></tr>
+            <tr><td><code>{ "DIM a(n)" }</code></td><td>{ "array, shared 1024-int pool" }</td></tr>
+            <tr><td><code>{ "DATA v1, v2, ..." }</code></td></tr>
+            <tr><td><code>{ "READ v" }</code></td></tr>
+            <tr><td><code>{ "RESTORE" }</code></td><td>{ "rewind DATA pointer" }</td></tr>
+            <tr><td><code>{ "POKE addr, val" }</code></td></tr>
+            <tr><td><code>{ "REM ..." }</code></td><td>{ "comment to end of line" }</td></tr>
+            <tr><td><code>{ "STOP / CONT" }</code></td><td>{ "pause / resume" }</td></tr>
+            <tr><td><code>{ "END / BYE" }</code></td><td>{ "halt program" }</td></tr>
+        </table>
+
+        <h3>{ "Operators (low to high precedence)" }</h3>
+        <table class="help-table">
+            <tr><td>{ "logical" }</td><td><code>{ "AND  OR" }</code></td></tr>
+            <tr><td>{ "bitwise" }</td><td><code>{ "BAND  BOR  BXOR  SHL  SHR" }</code></td></tr>
+            <tr><td>{ "relational" }</td><td><code>{ "=  <>  <  <=  >  >=" }</code></td></tr>
+            <tr><td>{ "additive" }</td><td><code>{ "+  -" }</code></td></tr>
+            <tr><td>{ "multiplicative" }</td><td><code>{ "*  /  MOD" }</code></td></tr>
+            <tr><td>{ "unary" }</td><td><code>{ "+  -" }</code></td></tr>
+        </table>
+        <p><i>{ "No " }</i><code>{ "^" }</code><i>{ " (exponent), no " }</i><code>{ "NOT" }</code><i>{ "." }</i></p>
+
+        <h3>{ "Built-in functions" }</h3>
+        <table class="help-table">
+            <tr><td><code>{ "ABS(x)" }</code></td><td>{ "absolute value" }</td></tr>
+            <tr><td><code>{ "CHR$(n)" }</code></td><td>{ "char with ASCII code n (PRINT only)" }</td></tr>
+            <tr><td><code>{ "PEEK(addr)" }</code></td><td>{ "byte at addr (0..1023 = user memory)" }</td></tr>
+        </table>
+        <p><i>{ "No RND, RANDOMIZE, INT, SGN, SQR, MID$, LEFT$, RIGHT$, STR$, VAL, SIN, COS, DEF FN." }</i></p>
+
+        <h3>{ "Limits" }</h3>
+        <table class="help-table">
+            <tr><td>{ "variables" }</td><td>{ "26 (A..Z), 24-bit signed" }</td></tr>
+            <tr><td>{ "line numbers" }</td><td>{ "0..65535" }</td></tr>
+            <tr><td>{ "program size" }</td><td>{ "16384 bytes tokenised" }</td></tr>
+            <tr><td>{ "array pool" }</td><td>{ "1024 ints across all DIMs" }</td></tr>
+            <tr><td>{ "GOSUB stack" }</td><td>{ "64 deep" }</td></tr>
+            <tr><td>{ "FOR stack" }</td><td>{ "16 deep" }</td></tr>
+            <tr><td>{ "user memory" }</td><td>{ "1024 bytes (PEEK/POKE 0..1023)" }</td></tr>
+        </table>
+
+        <h3>{ "Runtime errors" }</h3>
+        <table class="help-table">
+            <tr><td>{ "1" }</td><td>{ "syntax" }</td></tr>
+            <tr><td>{ "2" }</td><td>{ "unknown statement" }</td></tr>
+            <tr><td>{ "3" }</td><td>{ "line not found" }</td></tr>
+            <tr><td>{ "4" }</td><td>{ "DIM pool exhausted" }</td></tr>
+            <tr><td>{ "5" }</td><td>{ "divide by zero" }</td></tr>
+            <tr><td>{ "6" }</td><td>{ "GOSUB stack overflow" }</td></tr>
+            <tr><td>{ "7" }</td><td>{ "RETURN without GOSUB" }</td></tr>
+            <tr><td>{ "8" }</td><td>{ "array bounds" }</td></tr>
+            <tr><td>{ "9" }</td><td>{ "FOR stack overflow" }</td></tr>
+            <tr><td>{ "13" }</td><td>{ "READ past end of DATA" }</td></tr>
+            <tr><td>{ "16" }</td><td>{ "CONT without STOP" }</td></tr>
+        </table>
+        </>
     }
 }
