@@ -341,12 +341,12 @@ function __wbg_get_imports() {
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
             // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Ref(NamedExternref("Event"))], shim_idx: 62, ret: Unit, inner_ret: Some(Unit) }, mutable: false }) -> Externref`.
-            const ret = makeClosure(arg0, arg1, wasm_bindgen__convert__closures________invoke__ha5ed7d15ede49420);
+            const ret = makeClosure(arg0, arg1, wasm_bindgen__convert__closures________invoke__h2c98acf812dd8f88);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
             // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 12, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h9d01c68d7435bb1d);
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hc7ecad73fd39776c);
             return ret;
         },
         __wbindgen_cast_0000000000000004: function(arg0, arg1) {
@@ -370,12 +370,12 @@ function __wbg_get_imports() {
     };
 }
 
-function wasm_bindgen__convert__closures_____invoke__h9d01c68d7435bb1d(arg0, arg1) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h9d01c68d7435bb1d(arg0, arg1);
+function wasm_bindgen__convert__closures_____invoke__hc7ecad73fd39776c(arg0, arg1) {
+    wasm.wasm_bindgen__convert__closures_____invoke__hc7ecad73fd39776c(arg0, arg1);
 }
 
-function wasm_bindgen__convert__closures________invoke__ha5ed7d15ede49420(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures________invoke__ha5ed7d15ede49420(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures________invoke__h2c98acf812dd8f88(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures________invoke__h2c98acf812dd8f88(arg0, arg1, arg2);
 }
 
 function wasm_bindgen__convert__closures_____invoke__he5f2a9177ae85bcb(arg0, arg1, arg2) {

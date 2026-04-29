@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-04-29 (later)
+
+### UI
+
+- Add a focus chain: on page load the demo `<select>` is focused;
+  changing the demo focuses the **Run** button; clicking Run focuses
+  the input field. Each transition uses a `Timeout(0)` deferred
+  `.focus()` call so it runs after Yew commits the DOM update,
+  fixing a flake where the input field wouldn't reliably take focus
+  on Run-click and the user had to click the field manually before
+  pressing Enter.
+- Add `Session::echo_input(&str)` plus a wire-up in `Msg::InputSubmit`
+  that appends the user's typed line to the output panel without a
+  trailing newline. The COR24 VM has no TTY-style echo, so the
+  browser host now provides it. With the demo formatted using
+  `" - TRY HIGHER!"`-style responses, output reads as
+  `YOUR GUESS ? 50 - TRY HIGHER!` on a single line per guess.
+
+### Demos
+
+- Rewrite `guess-random.bas` flow:
+  - Print `RANDOMIZING...` *before* the seed loop (was: `--- GUESS
+    THE NUMBER ---` printed first, which was misleading — the game
+    proper hadn't started yet).
+  - Print `--- GUESS THE NUMBER ---` and `I AM THINKING...` *after*
+    the user presses Enter, so they appear once seeding is done.
+  - INPUT prompt now reads `YOUR GUESS ? ` (the interpreter does
+    not auto-print `? `, so the demo includes it in the literal).
+  - Response strings prefixed with `" - "` so they sit on the same
+    line as the echoed guess: `YOUR GUESS ? 50 - TRY HIGHER!`.
+
 ## 2026-04-29
 
 ### Runtime

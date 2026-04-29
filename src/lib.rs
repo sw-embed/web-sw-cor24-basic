@@ -1,5 +1,8 @@
 use gloo::timers::callback::Timeout;
-use web_sys::{Element, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, KeyboardEvent};
+use web_sys::{
+    Element, HtmlButtonElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement,
+    KeyboardEvent,
+};
 use yew::prelude::*;
 
 pub mod config;
@@ -14,6 +17,33 @@ const TICK_DELAY_MS: u32 = 0;
 
 fn now_ms() -> f64 {
     js_sys::Date::now()
+}
+
+fn defer_focus_input(node: NodeRef) {
+    Timeout::new(0, move || {
+        if let Some(el) = node.cast::<HtmlInputElement>() {
+            let _ = el.focus();
+        }
+    })
+    .forget();
+}
+
+fn defer_focus_select(node: NodeRef) {
+    Timeout::new(0, move || {
+        if let Some(el) = node.cast::<HtmlSelectElement>() {
+            let _ = el.focus();
+        }
+    })
+    .forget();
+}
+
+fn defer_focus_button(node: NodeRef) {
+    Timeout::new(0, move || {
+        if let Some(el) = node.cast::<HtmlButtonElement>() {
+            let _ = el.focus();
+        }
+    })
+    .forget();
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -55,9 +85,12 @@ pub struct App {
     awaiting_input: bool,
     output_ref: NodeRef,
     input_ref: NodeRef,
+    select_ref: NodeRef,
+    run_ref: NodeRef,
     show_help: bool,
     help_tab: HelpTab,
     focus_input_pending: bool,
+    focus_run_pending: bool,
 }
 
 impl App {
@@ -140,23 +173,31 @@ impl Component for App {
             awaiting_input: false,
             output_ref: NodeRef::default(),
             input_ref: NodeRef::default(),
+            select_ref: NodeRef::default(),
+            run_ref: NodeRef::default(),
             show_help: false,
             help_tab: HelpTab::Guide,
             focus_input_pending: false,
+            focus_run_pending: false,
         }
     }
 
-    fn rendered(&mut self, _ctx: &Context<Self>, _first_render: bool) {
+    fn rendered(&mut self, _ctx: &Context<Self>, first_render: bool) {
         if let Some(el) = self.output_ref.cast::<Element>() {
             el.set_scroll_top(el.scroll_height());
         }
-        let want_focus = self.awaiting_input || self.focus_input_pending;
-        if want_focus
-            && let Some(el) = self.input_ref.cast::<HtmlInputElement>()
-        {
-            let _ = el.focus();
+
+        if first_render {
+            defer_focus_select(self.select_ref.clone());
         }
-        self.focus_input_pending = false;
+        if self.focus_run_pending {
+            defer_focus_button(self.run_ref.clone());
+            self.focus_run_pending = false;
+        }
+        if self.awaiting_input || self.focus_input_pending {
+            defer_focus_input(self.input_ref.clone());
+            self.focus_input_pending = false;
+        }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
@@ -164,6 +205,7 @@ impl Component for App {
             Msg::SelectDemo(i) => {
                 self.load_demo(i);
                 self.max_instrs = DEFAULT_MAX_INSTRS;
+                self.focus_run_pending = true;
                 true
             }
             Msg::SourceChanged(v) => {
@@ -272,11 +314,21 @@ impl Component for App {
                 let line = std::mem::take(&mut self.input_line);
                 let was_awaiting = self.awaiting_input;
                 if let Some(session) = self.session.as_mut() {
+                    if was_awaiting {
+                        // TTY-style echo: the user's typed line should appear
+                        // in the output panel. No trailing newline so the
+                        // program's response can stick to the same line as
+                        // the INPUT prompt.
+                        session.echo_input(&line);
+                    }
                     session.feed_input(&line);
                 }
                 if was_awaiting {
-                    // Was blocked at INPUT (line-based GETC). feed_input cleared
-                    // the pause flag — resume the tick loop.
+                    self.output = self
+                        .session
+                        .as_ref()
+                        .map(|s| s.output())
+                        .unwrap_or_default();
                     self.awaiting_input = false;
                     self.status = "running...".into();
                     self.schedule_tick(ctx);
@@ -358,9 +410,9 @@ impl Component for App {
             "status"
         };
         let run_button = if self.running {
-            html! { <button onclick={on_stop}>{ "Stop" }</button> }
+            html! { <button ref={self.run_ref.clone()} onclick={on_stop}>{ "Stop" }</button> }
         } else {
-            html! { <button onclick={on_run}>{ "Run" }</button> }
+            html! { <button ref={self.run_ref.clone()} onclick={on_run}>{ "Run" }</button> }
         };
 
         let help_dialog = if self.show_help {
@@ -417,7 +469,7 @@ impl Component for App {
                 <header class="chrome">
                     <h1>{ "web-sw-cor24-basic" }</h1>
                     <div class="controls">
-                        <select onchange={on_demo} disabled={self.running}>
+                        <select ref={self.select_ref.clone()} onchange={on_demo} disabled={self.running}>
                             { for DEMOS.iter().enumerate().map(|(i, d)| html! {
                                 <option value={i.to_string()} selected={i == self.selected}>
                                     { d.name }

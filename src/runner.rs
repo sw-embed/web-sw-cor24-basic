@@ -175,6 +175,13 @@ impl Session {
         self.awaiting_input = false;
     }
 
+    /// Append text to the output buffer as if the program had PRINTed it.
+    /// Used by the host to echo bytes the user typed at an INPUT prompt
+    /// (the COR24 VM has no TTY-style echo, so this is host responsibility).
+    pub fn echo_input(&mut self, text: &str) {
+        self.stdout_buf.push_str(text);
+    }
+
     pub fn tick(&mut self) -> TickResult {
         if self.status != 0 {
             return TickResult { done: true };
